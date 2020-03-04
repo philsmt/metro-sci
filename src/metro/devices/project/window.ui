@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>windowWindowFilter</class>
+ <widget class="QWidget" name="windowWindowFilter">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>231</width>
+    <height>123</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Window Filter</string>
+  </property>
+  <layout class="QGridLayout" name="layoutMain">
+   <property name="horizontalSpacing">
+    <number>12</number>
+   </property>
+   <property name="verticalSpacing">
+    <number>6</number>
+   </property>
+   <item row="1" column="1">
+    <widget class="ParameterLineEdit" name="editLowerLimit">
+     <property name="text">
+      <string>0</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="labelUpperLimit">
+     <property name="text">
+      <string>Upper Limit:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <widget class="ParameterLineEdit" name="editOffset">
+     <property name="text">
+      <string>0</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="labelLowerLimit">
+     <property name="text">
+      <string>Lower limit:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QLabel" name="labelOffset">
+     <property name="text">
+      <string>Offset:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="ParameterLineEdit" name="editUpperLimit">
+     <property name="text">
+      <string>1000</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ParameterLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>metro.frontend.widgets</header>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>editOffset</tabstop>
+  <tabstop>editLowerLimit</tabstop>
+  <tabstop>editUpperLimit</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>

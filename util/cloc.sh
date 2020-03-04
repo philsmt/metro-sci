@@ -1,0 +1,1 @@
+cloc --exclude-dir=./metro/external,./build,./docs .

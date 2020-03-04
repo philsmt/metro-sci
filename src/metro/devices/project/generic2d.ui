@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>windowPositionAnodeFilter</class>
+ <widget class="QWidget" name="windowGeneric2dProjection">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>381</width>
+    <height>120</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Generic 2D projection</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="3" column="0">
+    <widget class="QLabel" name="labelYparams">
+     <property name="text">
+      <string>Y scale/offset</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="ParameterLineEdit" name="editXscale">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>1.0</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <widget class="ParameterLineEdit" name="editYscale">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>1.0</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="2">
+    <widget class="ParameterLineEdit" name="editXoffset">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>0.0</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="labelXparams">
+     <property name="text">
+      <string>X scale/offset</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="2">
+    <widget class="ParameterLineEdit" name="editYoffset">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>0.0</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="labelRotation">
+     <property name="text">
+      <string>R pre/post</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QDoubleSpinBox" name="editPreRotation">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="decimals">
+      <number>1</number>
+     </property>
+     <property name="minimum">
+      <double>-360.000000000000000</double>
+     </property>
+     <property name="maximum">
+      <double>360.000000000000000</double>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="2">
+    <widget class="QDoubleSpinBox" name="editPostRotation">
+     <property name="decimals">
+      <number>1</number>
+     </property>
+     <property name="minimum">
+      <double>-360.000000000000000</double>
+     </property>
+     <property name="maximum">
+      <double>360.000000000000000</double>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ParameterLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>metro.frontend.widgets</header>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>editPreRotation</tabstop>
+  <tabstop>editPostRotation</tabstop>
+  <tabstop>editXscale</tabstop>
+  <tabstop>editXoffset</tabstop>
+  <tabstop>editYscale</tabstop>
+  <tabstop>editYoffset</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>
