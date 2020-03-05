@@ -4,39 +4,17 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 import subprocess
 
-import numpy
-from setuptools import setup, find_packages
+from setuptools import Distribution, setup, find_packages
 from setuptools.extension import Extension
-from setuptools.command.build_ext import build_ext
+
+# Fetch numpy and Cython as build dependencies.
+Distribution().fetch_build_eggs(['numpy', 'Cython'])
+
+# Safe to import here after line above.
+import numpy
 from Cython.Build import cythonize
-
-
-class build_ext_compiler_specifics(build_ext):
-    extra_compile_args = {
-        'unix': ['-g0', '-Wno-unused-function', '-Wno-cpp']
-    }
-
-    def build_extensions(self):
-        compiler = self.compiler.compiler_type
-
-        try:
-            extra_compile_args = self.extra_compile_args[compiler].copy()
-        except KeyError:
-            extra_compile_args = []
-
-        for ext in self.extensions:
-            if isinstance(ext.extra_compile_args, dict):
-                try:
-                    extra_compile_args += ext.extra_compile_args[compiler]
-                except KeyError:
-                    pass
-
-            ext.extra_compile_args = extra_compile_args
-
-        super().build_extensions()
 
 
 def find_version():
@@ -52,25 +30,6 @@ def find_version():
             return None
         else:
             return short_hash.decode('ascii').strip()
-
-
-extensions = [
-    Extension(
-        name, ['src/' + name.replace('.', '/') + '.pyx'],
-        include_dirs=[numpy.get_include()],
-        language='c',
-        extra_compile_args={
-            'unix': ['-O3', '-march=native', '-ftree-vectorize',
-                     '-frename-registers'],
-            'mscv': ['/O2']
-        }
-    )
-    for name in [
-        'metro.devices.analyze._seq_cov_native',
-        'metro.devices.display._hist2d_native',
-        'metro.devices.display._fast_plot_native',
-    ]
-]
 
 
 setup(
@@ -131,8 +90,17 @@ setup(
             ]
         ]
     },
-    cmdclass={'build_ext': build_ext_compiler_specifics},
-    ext_modules=cythonize(extensions, language_level=3, build_dir='build'),
+    ext_modules=cythonize([
+        Extension('metro.devices.analyze._seq_cov_native',
+                  ['src/metro/devices/analyze/_seq_cov_native.pyx'],
+                  include_dirs=[numpy.get_include()]),
+        Extension('metro.devices.analyze._fast_plot_native',
+                  ['src/metro/devices/display/_fast_plot_native.pyx'],
+                  include_dirs=[numpy.get_include()]),
+        Extension('metro.devices.analyze._hist2d_native',
+                  ['src/metro/devices/display/_hist2d_native.pyx'],
+                  include_dirs=[numpy.get_include()]),
+    ], language_level=3, build_dir='build'),
 
     python_requires='>=3.6',
     install_requires=['typing', 'PyQt5', 'numpy', 'scipy', 'h5py'],
