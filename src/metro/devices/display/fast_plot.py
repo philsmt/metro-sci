@@ -14,7 +14,7 @@ from PyQt5 import QtWidgets
 try:
     import lttbc
 except ImportError:
-    downsample = None
+    lttbc = None
 
 import metro
 from metro.devices.abstract import fittable_plot
