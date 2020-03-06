@@ -144,16 +144,15 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         if state is None:
             state = {}
 
-        default_title = args['bg_text'] if args['bg_text'] \
-            else self._getDefaultTitle()
-
         self.index = metro.IndexArgument._str2index(state['index']) \
             if 'index' in state else args['index']
         self.plot_axes = numpy.asarray(state['axes'], dtype=numpy.float64) \
             if 'axes' in state \
             else numpy.array((0.0, 10.0, 0.0, 10.0), dtype=numpy.float64)
 
-        plot_title = state.pop('title', default_title)
+        plot_title = state.pop('title',
+                               args['bg_text'] if args['bg_text']
+                               else self._getDefaultTitle())
         self.current_roi = state.pop('current_roi', None)
         self.autoscale_x = state.pop('autoscale_x', True)
         self.autoscale_y = state.pop('autoscale_y', True)
