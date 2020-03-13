@@ -32,7 +32,10 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.displayImage = pyqtgraph.ImageView(self)
         self.displayImage._opt_2d_parallel_profiles = True
 
-        menu = self.displayImage.getView().menu
+        view = self.displayImage.getView()
+        view.setAspectLocked(False)
+
+        menu = view.menu
         menu.addSeparator()
 
         self.actionPauseDrawing = menu.addAction('Pause drawing')
