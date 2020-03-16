@@ -1042,6 +1042,11 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
         )
 
         final_args = {'channel': channel}
+
+        for key, value in channel.display_arguments.items():
+            if key.startswith(entry_point):
+                final_args[key[len(entry_point)+1:]] = value
+
         final_args.update(args)
 
         if show_dialog:
