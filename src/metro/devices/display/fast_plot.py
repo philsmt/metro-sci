@@ -7,6 +7,7 @@
 from math import ceil, floor, log10
 
 import numpy
+import xarray as xr
 from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
@@ -1097,8 +1098,10 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         pass
 
     def dataAdded(self, d):
-        self.ch_data = d
-        self.idx_data = d[self.index]
+        self.ch_data = numpy.array(d) if isinstance(d, xr.DataArray) \
+                       else d
+
+        self.idx_data = self.ch_data[self.index]
 
         if len(self.idx_data.shape) == 1:
             self.idx_data = self.idx_data[None, :]
@@ -1106,6 +1109,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         if self.with_x and self.idx_data.shape[0] > 1:
             self.x = self.idx_data[0]
             self.idx_data = self.idx_data[1:]
+        elif isinstance(d, xr.DataArray):
+            self.x = next(iter(d.coords.values())).data
         else:
             self.x = numpy.arange(self.idx_data.shape[1])
 
