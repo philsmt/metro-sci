@@ -1447,6 +1447,9 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
         self.size_y = args['size_y']
         self.proj_dev = None
 
+        if state is None:
+            state = {}
+
         if args['internalProj']:
             proj_args = {'channel': args['channel'], 'tag': 'map',
                          'count_rows': False}
@@ -1454,14 +1457,9 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
             if isinstance(args['internalProj'], dict):
                 proj_args.update(args['internalProj'])
 
-            if state is not None and state[7] is not None:
-                proj_state = state[7]
-            else:
-                proj_state = {'visible': False}
-
             self.proj_dev = self.createChildDevice(
                 'project.generic2d', 'internal', args=proj_args,
-                state=proj_state
+                state=state.pop('internal_proj', {'visible': False})
             )
 
             self.ch_in = self.proj_dev.ch_out
@@ -1660,25 +1658,24 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
 
         self.ch_in.subscribe(self)
 
-        if state is not None:
-            for roi in state[0]:
-                self._addRoi(*roi)
+        for roi in state.pop('roi', []):
+            self._addRoi(*roi)
 
-            if state[1] is not None:
-                self.imageDetector.setActiveRoi(state[1])
+        active_roi = state.pop('active_roi', None)
+        if active_roi is not None:
+            self.imageDetector.setActiveRoi(state[1])
+            self.actionTotalArea.setChecked(False)
+            self.roi_map[active_roi]['actionSpectrum'].setChecked(True)
 
-                self.actionTotalArea.setChecked(False)
-                self.roi_map[state[1]]['actionSpectrum'].setChecked(True)
+        projection = state.pop('mouse_proj', args['mouseMode'] == 'projection')
 
-            projection = state[2]
-
-            self.imageDetector.axes['x_min'] = state[3]
-            self.imageDetector.axes['x_max'] = state[4]
-            self.imageDetector.axes['y_min'] = state[5]
-            self.imageDetector.axes['y_max'] = state[6]
+        axes = state.pop('axes', None)
+        if axes is not None:
+            self.imageDetector.axes['x_min'] = axes[0]
+            self.imageDetector.axes['x_max'] = axes[1]
+            self.imageDetector.axes['y_min'] = axes[2]
+            self.imageDetector.axes['y_max'] = axes[3]
             self.imageDetector._updateRects()
-        else:
-            projection = args['mouseMode'] == 'projection'
 
         if self.proj_dev is not None and projection:
             self.actionMouseModeProj.setChecked(True)
@@ -1756,20 +1753,19 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
         else:
             internal_proj_state = None
 
-        return (
-            [
-                (x['name'], x['coords'][0], x['coords'][1],
-                 x['coords'][2], x['coords'][3])
-                for x in self.roi_map.values()
-            ],
-            active_roi['name'] if active_roi is not None else None,
-            self.actionMouseModeProj.isChecked(),
-            self.imageDetector.axes['x_min'],
-            self.imageDetector.axes['x_max'],
-            self.imageDetector.axes['y_min'],
-            self.imageDetector.axes['y_max'],
-            internal_proj_state
-        )
+        return {
+            'roi': [(x['name'], x['coords'][0], x['coords'][1],
+                     x['coords'][2], x['coords'][3])
+                    for x in self.roi_map.values()],
+            'active_roi': active_roi['name'] \
+                          if active_roi is not None else None,
+            'mouse_proj': self.actionMouseModeProj.isChecked(),
+            'axes': [self.imageDetector.axes['x_min'],
+                     self.imageDetector.axes['x_max'],
+                     self.imageDetector.axes['y_min'],
+                     self.imageDetector.axes['y_max']],
+            'internal_proj': internal_proj_state
+        }
 
     @staticmethod
     def isChannelSupported(channel):
