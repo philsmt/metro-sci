@@ -1649,7 +1649,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
 
         # Redraws detector image and spectrum
         self.draw_timer = metro.QTimer(self)
-        self.draw_timer.setInterval(100)
+        self.draw_timer.setInterval(1000)
         self.draw_timer.timeout.connect(self.on_draw_tick)
 
         self.rate_timer = metro.QTimer(self)
@@ -1698,9 +1698,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
         if self.ch_in.isStatic():
             return
 
-        self.measure_connect(prepared=self.draw_timer.start,
-                             stopped=self.measuringStopped,
-                             finalized=self.draw_timer.stop)
+        self.measure_connect(stopped=self.measuringStopped)
         self.measure_connect(started=self.rate_timer.start,
                              stopped=self.rate_timer.stop)
 
@@ -1712,9 +1710,9 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
             # by hand for the moment.
 
             self.rate_timer.start()
-            self.draw_timer.start()
-            meas.finalized.connect(self.draw_timer.stop)
             meas.finalized.connect(self.rate_timer.stop)
+
+        self.draw_timer.start()
 
     def finalize(self):
         self.draw_timer.stop()
@@ -1963,10 +1961,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
         self.hits_last_sec += n_hits
         self.total_hits += n_hits
 
-        # dataAdded will not update the screen outside of a measurement,
-        # since the draw timer is not running!
-        self.dirty = True
-        self.on_draw_tick()
+        self.dirty = True  # Render on draw tick.
 
     def dataCleared(self):
         self.imageDetector.clear()
