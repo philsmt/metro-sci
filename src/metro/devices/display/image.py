@@ -7,13 +7,73 @@
 import math
 import time
 
-import numpy
+import numpy as np
+import xarray as xr
 
 import metro
 from metro.external import pyqtgraph
 from metro.devices.abstract import fittable_plot
 
 pyqtgraph.setConfigOptions(antialias=False)
+
+
+class DataImageItem(pyqtgraph.ImageItem):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._coords = None
+
+    def setCoordinates(self, x, y):
+        if len(x) > 1:
+            x_min = x.min()
+            dx = x[1] - x[0]
+            x_start = x_min - dx/2
+            x_len = x.max() - x_min + dx
+        else:
+            x_start = x[0] - 0.5
+            x_len = 1.0
+
+        if len(y) > 1:
+            y_min = y.min()
+            dy = y[1] - y[0]
+            y_start = y_min - dy/2
+            y_len = y.max() - y_min + dy
+        else:
+            y_start = y[0] - 0.5
+            y_len = 1.0
+
+        self._coords = (x_start, y_start, x_len, y_len)
+
+    def boundingRect(self):
+        if self._coords is None:
+            return super().boundingRect()
+
+        return metro.QtCore.QRectF(*self._coords)
+
+    def paint(self, p, *args):
+        # Verbatim copy of ImageItem.paint() except for the actual
+        # drawImage call.
+
+        if self.image is None:
+            return
+        if self.qimage is None:
+            self.render()
+            if self.qimage is None:
+                return
+        if self.paintMode is not None:
+            p.setCompositionMode(self.paintMode)
+
+        shape = self.image.shape[:2] if self.axisOrder == 'col-major' \
+            else self.image.shape[:2][::-1]
+
+        if self._coords is None:
+            p.drawImage(metro.QtCore.QRectF(0,0,*shape), self.qimage)
+        else:
+            p.drawImage(metro.QtCore.QRectF(*self._coords), self.qimage)
+
+        if self.border is not None:
+            p.setPen(self.border)
+            p.drawRect(self.boundingRect())
 
 
 class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
@@ -29,10 +89,14 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.scale_to_fit = args['scale_to_fit']
         self.history_streak = args['history_streak']
 
-        self.displayImage = pyqtgraph.ImageView(self)
+        self.plotItem = pyqtgraph.PlotItem()
+        self.imageItem = DataImageItem()
+
+        self.displayImage = pyqtgraph.ImageView(
+            self, view=self.plotItem, imageItem=self.imageItem)
         self.displayImage._opt_2d_parallel_profiles = True
 
-        view = self.displayImage.getView()
+        view = self.plotItem.getViewBox()
         view.setAspectLocked(False)
 
         menu = view.menu
@@ -121,8 +185,20 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         pass
 
     def dataAdded(self, d):
+        if isinstance(d, xr.DataArray):
+            x = d.coords[d.dims[0]].data
+            self.plotItem.setLabel('bottom', d.dims[0])
+            y = d.coords[d.dims[1]].data
+            self.plotItem.setLabel('left', d.dims[1])
+            d = d.data
+        elif isinstance(d, np.ndarray):
+            x = np.arange(d.shape[0])
+            y = np.arange(d.shape[1])
+        else:
+            raise ValueError('incompatible type')
+
         if self.history_streak > 0:
-            d = numpy.squeeze(d)
+            d = np.squeeze(d)
 
             # Remove any additional axes
             while len(d.shape) > 1:
@@ -130,12 +206,11 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
             if self.history_buffer is None or \
                     self.history_buffer.shape[1] != len(d):
-                self.history_buffer = numpy.zeros(
+                self.history_buffer = np.zeros(
                     (self.history_streak, len(d)), dtype=d.dtype)
 
             # Pretty expensive for now
-            self.history_buffer = numpy.roll(self.history_buffer, 1,
-                                             axis=0)
+            self.history_buffer = np.roll(self.history_buffer, 1, axis=0)
             self.history_buffer[0, :] = d
 
             # Draw the history buffer now
@@ -168,6 +243,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             scale = None
 
         start = time.time()
+        self.imageItem.setCoordinates(x, y)
         self.displayImage.setImage(d, autoLevels=z_scale, autoRange=False,
                                    scale=scale)
         self.auto_z_scale = self.actionAutoScale.isChecked()
