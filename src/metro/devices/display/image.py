@@ -81,12 +81,10 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
     arguments = {
         'channel': metro.ChannelArgument(type_=metro.DatagramChannel),
-        'scale_to_fit': False,
         'history_streak': -1
     }
 
     def prepare(self, args, state):
-        self.scale_to_fit = args['scale_to_fit']
         self.history_streak = args['history_streak']
 
         self.plotItem = pyqtgraph.PlotItem()
@@ -236,16 +234,9 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
                 z_scale = True
                 self.scale_z_once = False
 
-        if self.scale_to_fit:
-            view = self.displayImage.ui.graphicsView
-            scale = [d.shape[1]/d.shape[0], view.height() / view.width()]
-        else:
-            scale = None
-
         start = time.time()
         self.imageItem.setCoordinates(x, y)
-        self.displayImage.setImage(d, autoLevels=z_scale, autoRange=False,
-                                   scale=scale)
+        self.displayImage.setImage(d, autoLevels=z_scale, autoRange=False)
         self.auto_z_scale = self.actionAutoScale.isChecked()
         end = time.time()
 
