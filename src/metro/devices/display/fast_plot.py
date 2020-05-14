@@ -696,8 +696,9 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         while interval // tick > max_ticks:
             tick += 10**dim
 
+        tick_dim = -int(numpy.log10(tick)) + 1
         value = ceil(start / tick) * tick
-        labels = [value]
+        labels = [label_fmt.format(round(value, tick_dim))]
         major_pos = [(value - start) * div + offset]
         minor_pos = []
 
@@ -711,7 +712,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             if value > end:
                 break
 
-            labels.append(label_fmt.format(value))
+            labels.append(label_fmt.format(round(value, tick_dim)))
             major_pos.append((value - start) * div + offset)
 
         return labels, major_pos, minor_pos
