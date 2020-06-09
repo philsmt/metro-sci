@@ -427,10 +427,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         if self.mouse_move_origin is None:
             return
 
-        dx = int((event.x() - self.mouse_move_origin.x()) /
-                 self.plot_transform[0])
-        dy = int((event.y() - self.mouse_move_origin.y()) /
-                 self.plot_transform[1])
+        dx = (event.x() - self.mouse_move_origin.x()) / self.plot_transform[0]
+        dy = (event.y() - self.mouse_move_origin.y()) / self.plot_transform[1]
 
         if self.mouse_move_mode == self.MOUSE_MOVE_PLOT_BEGIN:
             self.mouse_move_mode = self.MOUSE_MOVE_PLOT_ON
