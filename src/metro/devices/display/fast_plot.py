@@ -4,6 +4,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 
+from itertools import repeat
 from math import ceil, floor, log10
 
 import numpy as np
@@ -125,6 +126,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.y_label = None
         self.legend_label = None
         self.legend_entries = []
+        self.vlines = None
+        self.hlines = None
 
         self.axes_texts = []
         self.axes_lines = []
@@ -177,6 +180,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
         self.roi_edgecolor = QtGui.QColor(200, 200, 0)
         self.roi_facecolor = QtGui.QColor(150, 150, 0, 80)
+
+        self.lines_color = QtGui.QColor(200, 200, 0)
 
         self.mouse_move_origin = None
         self.mouse_move_roi = None
@@ -502,6 +507,10 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
     def paintEvent(self, event):
         p = QtGui.QPainter(self)
 
+        width = self.width()
+        height = self.height()
+
+        # Title text.
         if self.title_text is not None:
             p.save()
             p.setPen(self.title_color)
@@ -509,9 +518,72 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             p.drawText(self.title_bbox, QtConsts.AlignRight, self.title_text)
             p.restore()
 
+        p.setPen(self.lines_color)
+
+        # Vertical annotation lines.
+        if self.vlines is not None:
+            div = self.plot_transform[0]
+            y_end = -self.plot_geometry[3]
+
+            p.save()
+            p.translate(
+                self.plot_geometry[0] - self.plot_axes[0] * div,
+                height - self.plot_geometry[1])
+
+            if isinstance(self.vlines, dict):
+                vlines_it = self.vlines.items()
+            else:
+                vlines_it = zip(self.vlines, repeat(None))
+
+            flags = QtConsts.AlignTop | QtConsts.AlignLeft
+
+            for x_data, text in vlines_it:
+                if self.plot_axes[0] < x_data < self.plot_axes[1]:
+                    x_widget = x_data * div
+                    p.drawLine(x_widget, 0.0, x_widget, y_end)
+
+                    if text is not None:
+                        p.drawText(p.boundingRect(
+                            x_widget+5, y_end, 1, 1, flags, text),
+                            flags, text)
+
+            p.restore()
+
+        # Horizontal annotation lines.
+        if self.hlines is not None:
+            div = self.plot_transform[1]
+            x_end = self.plot_geometry[2]
+
+            p.save()
+            p.translate(
+                self.plot_geometry[0],
+                height - (self.plot_geometry[1] - self.plot_axes[2] * div))
+
+            if isinstance(self.hlines, dict):
+                hlines_it = self.hlines.items()
+            else:
+                hlines_it = zip(self.hlines, repeat(None))
+
+            flags = QtConsts.AlignHCenter | QtConsts.AlignRight
+
+            for y_data, text in hlines_it:
+                if self.plot_axes[2] < y_data < self.plot_axes[3]:
+                    y_widget = -y_data * div
+                    p.drawLine(0.0, y_widget, x_end, y_widget)
+
+                    if text is not None:
+                        p.drawText(p.boundingRect(
+                            x_end, y_widget, 1, 1, flags, text),
+                            flags, text)
+
+            p.restore()
+
+        # Data image
         p.drawImage(self.rect(), self.data_img)
+
         p.setPen(self.axis_pen)
 
+        # Axis tick labels.
         p.save()
         font = p.font()
         font.setStretch(80)
@@ -525,26 +597,30 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
         p.restore()
 
+        # Axis lines.
+        p.drawLines(self.axes_lines)
+
+        # X axis label.
         if self.x_label is not None:
             flags = QtConsts.AlignVCenter | QtConsts.AlignHCenter
 
             p.drawText(p.boundingRect(
-                self.width() // 2, self.height() - 10, 1, 1, flags,
-                self.x_label
+                width // 2, height - 10, 1, 1, flags, self.x_label
             ), flags, self.x_label)
 
+        # Y axis label.
         if self.y_label is not None:
             flags = QtConsts.AlignTop | QtConsts.AlignLeft
 
             p.drawText(p.boundingRect(
-                self.plot_geometry[0] + 10, 5, 1, 1, flags,
-                self.y_label
+                self.plot_geometry[0] + 10, 5, 1, 1, flags, self.y_label
             ), flags, self.y_label)
 
+        # Legend.
         if self.show_legend and self.legend_entries is not None:
             p.save()
 
-            x = self.width() - 8
+            x = width - 8
             y = 12
             flags = QtConsts.AlignVCenter | QtConsts.AlignRight
 
@@ -572,8 +648,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
             p.restore()
 
-        p.drawLines(self.axes_lines)
-
+        # Region of interest.
         if self.roi_rect is not None:
             p.setPen(self.roi_edgecolor)
             p.drawLines(self.roi_lines)
@@ -1140,6 +1215,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             self.x = d.coords[d.dims[-1]].data
             self.x_label = d.dims[-1]
             self.y_label = d.attrs.get('ylabel', None)
+            self.vlines = d.attrs.get('vlines', None)
+            self.hlines = d.attrs.get('hlines', None)
         else:
             self.idx_data = self.ch_data[self.index]
 
@@ -1152,7 +1229,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             else:
                 self.x = np.arange(self.idx_data.shape[1])
 
-            self.x_label = self.y_label = self.legend_entries = None
+            self.x_label = self.y_label = self.legend_entries = \
+                self.vlines = self.hlines = None
 
         self._notifyFittingCallbacks(self.x, self.idx_data[0])
 
