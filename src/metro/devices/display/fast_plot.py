@@ -6,7 +6,7 @@
 
 from math import ceil, floor, log10
 
-import numpy
+import numpy as np
 import xarray as xr
 from PyQt5 import QtCore
 from PyQt5 import QtGui
@@ -97,7 +97,6 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         'style': tuple(COLOR_STYLES.keys()),
         'with_x': False,
         'show_marker': True,
-        'show_legend': False,
         'downsampling': 0,
     }
 
@@ -120,9 +119,12 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.channel = args['channel']
         self.roi_map = {}
 
-        self.has_metropc_tags = hasattr(self.channel, '_metropc_tags')
-
         self.stacking_outp = None
+
+        self.x_label = None
+        self.y_label = None
+        self.legend_label = None
+        self.legend_entries = []
 
         self.axes_texts = []
         self.axes_lines = []
@@ -138,18 +140,18 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
         self.data_img = None
 
-        self.plot_geometry = numpy.zeros((4,), dtype=numpy.int32)
-        self.plot_roi = numpy.zeros((2,), dtype=numpy.int32)
-        self.plot_transform = numpy.zeros((2,), dtype=numpy.float64)
+        self.plot_geometry = np.zeros((4,), dtype=np.int32)
+        self.plot_roi = np.zeros((2,), dtype=np.int32)
+        self.plot_transform = np.zeros((2,), dtype=np.float64)
 
         if state is None:
             state = {}
 
         self.index = metro.IndexArgument._str2index(state['index']) \
             if 'index' in state else args['index']
-        self.plot_axes = numpy.asarray(state['axes'], dtype=numpy.float64) \
+        self.plot_axes = np.asarray(state['axes'], dtype=np.float64) \
             if 'axes' in state \
-            else numpy.array((0.0, 10.0, 0.0, 10.0), dtype=numpy.float64)
+            else np.array((0.0, 10.0, 0.0, 10.0), dtype=np.float64)
 
         plot_title = state.pop('title',
                                args['bg_text'] if args['bg_text']
@@ -159,8 +161,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.autoscale_y = state.pop('autoscale_y', True)
         self.stacking = state.pop('stacking', 0.0)
         self.show_marker = state.pop('show_marker', args['show_marker'])
-        self.show_legend = state.pop(
-            'show_legend', args['show_legend'] and self.has_metropc_tags)
+        self.show_legend = state.pop('show_legend', True)
         self.downsampling = state.pop('downsampling', args['downsampling'])
 
         if lttbc is None:
@@ -295,11 +296,10 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.actionShowMarker.setCheckable(True)
         self.actionShowMarker.setChecked(self.show_marker)
 
-        if self.has_metropc_tags:
-            self.actionShowLegend = self.menuContext.addAction(
-                'Show scan legend')
-            self.actionShowLegend.setCheckable(True)
-            self.actionShowLegend.setChecked(self.show_legend)
+        self.actionShowLegend = self.menuContext.addAction(
+            'Show scan legend')
+        self.actionShowLegend.setCheckable(True)
+        self.actionShowLegend.setChecked(self.show_legend)
 
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.on_menuContext_requested)
@@ -525,25 +525,48 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
         p.restore()
 
-        if self.show_legend:
-            p.save()
+        if self.x_label is not None:
+            flags = QtConsts.AlignVCenter | QtConsts.AlignHCenter
 
-            font = p.font()
-            font.setBold(True)
-            p.setFont(font)
+            p.drawText(p.boundingRect(
+                self.width() // 2, self.height() - 10, 1, 1, flags,
+                self.x_label
+            ), flags, self.x_label)
+
+        if self.y_label is not None:
+            flags = QtConsts.AlignTop | QtConsts.AlignLeft
+
+            p.drawText(p.boundingRect(
+                self.plot_geometry[0] + 10, 5, 1, 1, flags,
+                self.y_label
+            ), flags, self.y_label)
+
+        if self.show_legend and self.legend_entries is not None:
+            p.save()
 
             x = self.width() - 8
             y = 12
             flags = QtConsts.AlignVCenter | QtConsts.AlignRight
 
-            for i, tag in enumerate(self.channel._metropc_tags):
+            if self.legend_label is not None and self.legend_label != 'dim_0':
+                p.drawText(p.boundingRect(
+                    x, y, 1, 1, flags, self.legend_label),
+                    flags, self.legend_label)
+
+                y += 15
+
+            font = p.font()
+            font.setBold(True)
+            p.setFont(font)
+
+            for i, entry in enumerate(self.legend_entries):
                 color_idx = ((i % len(self.style)) + 1) * 10 + 2
-                tag_str = '{:.5g}'.format(tag) \
-                          if isinstance(tag, float) else str(tag)
+                entry_str = '{:.5g}'.format(entry) \
+                            if isinstance(entry, float) else str(entry)
 
                 p.setPen(QtGui.QColor(self.data_img.color(color_idx)))
-                p.drawText(p.boundingRect(x, y, 1, 1, flags, tag_str), flags,
-                           tag_str)
+                p.drawText(p.boundingRect(
+                    x, y, 1, 1, flags, entry_str), flags, entry_str)
 
                 y += 15
 
@@ -694,7 +717,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         while interval // tick > max_ticks:
             tick += 10**dim
 
-        tick_dim = -int(numpy.log10(tick)) + 1
+        tick_dim = -int(np.log10(tick)) + 1
         value = ceil(start / tick) * tick
         labels = [label_fmt.format(round(value, tick_dim))]
         major_pos = [(value - start) * div + offset]
@@ -880,10 +903,11 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
         self.data_img.fill(0)
 
+        # x_offset, y_offset, width, height
         self.plot_geometry[0] = 50
-        self.plot_geometry[1] = 20
+        self.plot_geometry[1] = 35
         self.plot_geometry[2] = new_width - 60
-        self.plot_geometry[3] = new_height - 30
+        self.plot_geometry[3] = new_height - 45
 
         _native.surface_set_geometry(
             self.surface, self.data_img.bits(), self.data_img.bytesPerLine(),
@@ -1101,27 +1125,40 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         pass
 
     def dataAdded(self, d):
-        self.ch_data = numpy.array(d) if isinstance(d, xr.DataArray) \
-                       else d
+        self.ch_data = d
 
-        self.idx_data = self.ch_data[self.index]
+        if isinstance(self.ch_data, xr.DataArray):
+            self.idx_data = self.ch_data.data[self.index]
 
-        if len(self.idx_data.shape) == 1:
-            self.idx_data = self.idx_data[None, :]
+            if self.idx_data.ndim == 1:
+                self.idx_data = self.idx_data[None, :]
+                self.legend_entries = None
+            else:
+                self.legend_label = d.dims[0]
+                self.legend_entries = d.coords[d.dims[0]].data[self.index]
 
-        if self.with_x and self.idx_data.shape[0] > 1:
-            self.x = self.idx_data[0]
-            self.idx_data = self.idx_data[1:]
-        elif isinstance(d, xr.DataArray):
-            self.x = next(iter(d.coords.values())).data
+            self.x = d.coords[d.dims[-1]].data
+            self.x_label = d.dims[-1]
+            self.y_label = d.attrs.get('ylabel', None)
         else:
-            self.x = numpy.arange(self.idx_data.shape[1])
+            self.idx_data = self.ch_data[self.index]
+
+            if self.idx_data.ndim == 1:
+                self.idx_data = self.idx_data[None, :]
+
+            if self.with_x and self.idx_data.shape[0] > 1:
+                self.x = self.idx_data[0]
+                self.idx_data = self.idx_data[1:]
+            else:
+                self.x = np.arange(self.idx_data.shape[1])
+
+            self.x_label = self.y_label = self.legend_entries = None
 
         self._notifyFittingCallbacks(self.x, self.idx_data[0])
 
         if self.stacking > 0.0:
             if self.stacking_outp is None:
-                self.stacking_outp = numpy.zeros(
+                self.stacking_outp = np.zeros(
                     (self.idx_data.shape[0],
                      min(self.idx_data.shape[1], int(self.stacking))),
                     dtype=self.idx_data.dtype
@@ -1162,8 +1199,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
     def addFittedCurve(self, tag, x, y):
         # We just assume x to be the same as for our own data currently,
-        # which is just an numpy.arange(len(y))
-        self.fit_data[tag] = y.astype(numpy.int32)
+        # which is just np.arange(len(y))
+        self.fit_data[tag] = y.astype(np.int32)
 
         self.repaint(data_changed=True)
 
