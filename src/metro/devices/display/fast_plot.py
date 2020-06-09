@@ -704,8 +704,12 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
         while True:
             for i in range(1, minor_ticks+1):
-                minor_pos.append((value + tick*(i/(minor_ticks+1)) - start)
-                                 * div + offset)
+                minor_value = value + tick*(i/(minor_ticks+1))
+
+                if minor_value > end:
+                    break
+
+                minor_pos.append((minor_value - start) * div + offset)
 
             value = value + tick
 
