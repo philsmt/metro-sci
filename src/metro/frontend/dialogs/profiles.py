@@ -24,7 +24,7 @@ class SaveProfileDialog(QtWidgets.QDialog):
         self.setWindowTitle(f'Save profile - {metro.WINDOW_TITLE}')
 
         for profile in profiles:
-            self.editName.addItem(profile[11:-5])
+            self.editName.addItem(os.path.basename(profile)[:-5])
 
         self.editName.lineEdit().setText('')
 
