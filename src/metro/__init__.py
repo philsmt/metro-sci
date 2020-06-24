@@ -189,7 +189,7 @@ def init(args, window_title, local_path='~/.metro',
         'Measurement': measure.Measurement
     })
 
-    from metro import devices
+    from .services import devices
     globals().update({
         'devices': devices,
         'getDevice': devices.get,
@@ -215,6 +215,21 @@ def init(args, window_title, local_path='~/.metro',
         'OperatorArgument': arguments.OperatorArgument,
         'FileArgument': arguments.FileArgument
     })
+
+
+def init_mp_support():
+    try:
+        core_mode
+    except NameError:
+        pass
+    else:
+        return
+
+    class _Args:
+        core_mode = False
+        kiosk_mode = False
+
+    init(_Args, 'Metro')
 
 
 def start(prog_name='metro', window_title='Metro', cli_hook=None):
