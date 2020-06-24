@@ -25,9 +25,6 @@ import threading
 import traceback
 
 import metro
-# For some strange reason we need to import this explicitely for the
-# second process when using the spawn method for new processes.
-from metro.devices import WidgetDevice
 
 
 _targets = {}
@@ -187,7 +184,7 @@ class Agent(metro.QObject):
         self.stepDone.emit()
 
 
-class Device(WidgetDevice):
+class Device(metro.WidgetDevice):
     def prepare(self, operator_cls, operator_args, newData, state,
                 prefilter=lambda d: d, target=None, target_cap=5,
                 data_pipes=None):

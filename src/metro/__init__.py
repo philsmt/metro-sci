@@ -189,7 +189,7 @@ def init(args, window_title, local_path='~/.metro',
         'Measurement': measure.Measurement
     })
 
-    from metro import devices
+    from .services import devices
     globals().update({
         'devices': devices,
         'getDevice': devices.get,
