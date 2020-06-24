@@ -103,7 +103,7 @@ setup(
     ], language_level=3, build_dir='build'),
 
     python_requires='>=3.6',
-    install_requires=['typing', 'PyQt5', 'numpy', 'scipy', 'h5py'],
+    install_requires=['typing', 'PyQt5', 'numpy', 'scipy', 'h5py', 'xarray'],
 
     classifiers=[
         'Development Status :: 5 - Production/Stable',
