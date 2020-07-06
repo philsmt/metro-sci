@@ -25,6 +25,7 @@ import threading
 import traceback
 
 import metro
+metro.init_mp_support()
 
 
 _targets = {}

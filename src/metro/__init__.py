@@ -217,6 +217,21 @@ def init(args, window_title, local_path='~/.metro',
     })
 
 
+def init_mp_support():
+    try:
+        core_mode
+    except NameError:
+        pass
+    else:
+        return
+
+    class _Args:
+        core_mode = False
+        kiosk_mode = False
+
+    init(_Args, 'Metro')
+
+
 def start(prog_name='metro', window_title='Metro', cli_hook=None):
     args, argv_left = parse_args(prog_name, cli_hook=cli_hook)
     init(args, window_title)
