@@ -503,20 +503,11 @@ class GenericDevice(metro.measure.Node):
         return get(name)
 
     @classmethod
-    def __ge__(cls, other_cls):
+    def isSubDevice(cls, other_cls):
         if isinstance(other_cls, str):
             other_cls = load(other_cls)
 
-        if cls == other_cls:
-            return True
-
-        for parent_class in cls.__bases__:
-            if parent_class == metro.GenericDevice:
-                continue
-            elif parent_class >= other_cls:
-                return True
-
-            return False
+        return issubclass(cls, other_cls)
 
     def isChildDevice(self):
         """
