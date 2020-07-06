@@ -1471,7 +1471,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
 
             ch_dev = metro.findDeviceForChannel(self.ch_in.name)
 
-            if ch_dev is not None and ch_dev >= 'project.generic2d':
+            if ch_dev is not None and ch_dev.isSubDevice('project.generic2d'):
                 self.proj_dev = ch_dev
 
         self.dirty = False
