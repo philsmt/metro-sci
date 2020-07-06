@@ -11,7 +11,6 @@ from PyQt5 import QtWidgets
 from PyQt5 import uic as QtUic
 
 import metro
-from metro import devices
 
 
 class SaveProfileDialog(QtWidgets.QDialog):
@@ -28,7 +27,8 @@ class SaveProfileDialog(QtWidgets.QDialog):
 
         self.editName.lineEdit().setText('')
 
-        device_list = sorted(devices.getAll(), key=lambda x: x.getDeviceName())
+        device_list = sorted(metro.getAllDevices(),
+                             key=lambda x: x.getDeviceName())
 
         for device in device_list:
             device_item = QtWidgets.QListWidgetItem(device.getDeviceName(),

@@ -11,12 +11,8 @@ from itertools import accumulate
 from pkg_resources import iter_entry_points
 
 import metro
-from metro import devices
-from metro.services import channels
-from metro.services import measure
-from metro.services import profiles
-from metro.frontend import dialogs
-from metro.frontend import widgets
+from metro.services import channels, measure, profiles
+from metro.frontend import dialogs, widgets
 
 QtCore = metro.QtCore
 QtGui = metro.QtGui
@@ -604,15 +600,15 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
             )
 
             if was_minimized:
-                for d in devices.getAll():
+                for d in metro.getAllDevices():
                     if d.isVisible():
                         d.maximize()
 
     def deviceCreated(self, device):
-        if isinstance(device, devices.TransientDevice):
+        if isinstance(device, metro.TransientDevice):
             return
-        elif isinstance(device, devices.DisplayDevice) or \
-                isinstance(device._parent, devices.DisplayDevice):
+        elif isinstance(device, metro.DisplayDevice) or \
+                isinstance(device._parent, metro.DisplayDevice):
             layout = self.layoutDisplayDevices
             visible = self.actionShowDisplayDevices.isChecked()
         else:
@@ -659,7 +655,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
 
         n_channels = len(channels_label)
 
-        if isinstance(device, devices.DisplayDevice):
+        if isinstance(device, metro.DisplayDevice):
             layout = self.layoutDisplayDevices
         else:
             layout = self.layoutDevices
@@ -681,7 +677,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
 
     def deviceShown(self, device):
         # Skip display devices
-        if isinstance(device, devices.DisplayDevice):
+        if isinstance(device, metro.DisplayDevice):
             return
 
         device_name = device._name
@@ -690,7 +686,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
 
     def deviceHidden(self, device):
         # Skip display devices
-        if isinstance(device, devices.DisplayDevice):
+        if isinstance(device, metro.DisplayDevice):
             return
 
         device_name = device._name
@@ -703,7 +699,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
         self.selectLinearScanOperator.clear()
         self.selectLinearScanOperator.addItem('none')
 
-        for name in sorted(list(devices._operators.scan.keys())):
+        for name in sorted(list(metro.getAllOperators('scan').keys())):
             self.selectLinearScanOperator.addItem(name)
 
         idx = self.selectLinearScanOperator.findText(prev_op,
@@ -714,7 +710,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
     def channelOpened(self, channel):
         name = channel.name
 
-        device = devices.findDeviceForChannel(name)
+        device = metro.findDeviceForChannel(name)
 
         if device is not None:
             try:
@@ -737,7 +733,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
 
     # Callback from channels module (implemented as a normal Watcher)
     def channelClosed(self, channel):
-        device = devices.findDeviceForChannel(channel.name)
+        device = metro.findDeviceForChannel(channel.name)
 
         if device is not None:
             try:
@@ -771,7 +767,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
         for dev_grp in metro.app.device_groups:
             dev_grp.close()
 
-        devices.killAll()
+        metro.killAllDevices()
 
         metro.app.processEvents()
         metro.app.quit()
@@ -785,7 +781,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
 
     @QtCore.pyqtSlot()
     def _leak_check(self):
-        devices.checkForLeaks()
+        metro.checkForDeviceLeaks()
 
     @QtCore.pyqtSlot(int)
     def updateStatus(self, code):
@@ -1038,7 +1034,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
 
         self._resetStepDurationGuess()
 
-        cur_nodes = list(devices.getAll())
+        cur_nodes = list(metro.getAllDevices())
         cur_nodes.append(self)
 
         cur_channels = [chan for chan
@@ -1260,7 +1256,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
             if not confirmed or not text:
                 return
 
-            window_group = devices.WindowGroupWidget(text)
+            window_group = metro.WindowGroupWidget(text)
             metro.app.addDeviceGroup(window_group)
 
         elif name == '__group_by_tab__':
@@ -1271,7 +1267,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
             if not confirmed or not text:
                 return
 
-            tab_group = devices.TabGroupWidget(text)
+            tab_group = metro.TabGroupWidget(text)
             metro.app.addDeviceGroup(tab_group)
 
         elif action == self.actionShowDisplayDevices:
