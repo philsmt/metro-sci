@@ -203,6 +203,7 @@ def init(args, window_title, local_path='~/.metro',
         'TransientDevice': devices.TransientDevice,
         'WidgetDevice': devices.WidgetDevice
     })
+    #print("\n devices in metro:", dir(devices)) # DEBUG
 
     from .frontend import arguments
     globals().update({
@@ -217,10 +218,14 @@ def init(args, window_title, local_path='~/.metro',
     })
 
 
+# Need to be called when multiprocessing "spawn"s (in Windows) new threads
+# as the modules need to be initialized for each thread separately
+# (-> parallel_operator.py)
 def init_mp_support():
     try:
         core_mode
-    except NameError:
+        devices.CoreDevice
+    except (NameError, AttributeError):
         pass
     else:
         return
