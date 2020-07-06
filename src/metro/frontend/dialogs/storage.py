@@ -15,7 +15,6 @@ from PyQt5 import QtWidgets
 from PyQt5 import uic as QtUic
 
 import metro
-from metro import devices
 
 
 class ReplayStreamChannelDialog(QtWidgets.QDialog):
@@ -274,9 +273,9 @@ class ReplayStreamChannelDialog(QtWidgets.QDialog):
             if not p[3].isChecked():
                 continue
 
-            devices.create(p[1], '{0}_{1}'.format(name, p[0]),
-                           args={'channel': chan, 'count_rows': False},
-                           state={'visible': False, 'custom': p[2]})
+            metro.createDevice(p[1], '{0}_{1}'.format(name, p[0]),
+                               args={'channel': chan, 'count_rows': False},
+                               state={'visible': False, 'custom': p[2]})
 
         self.progress_timer.stop()
         self.labelProgress.setText('Done!')

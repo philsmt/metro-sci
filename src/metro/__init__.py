@@ -191,17 +191,26 @@ def init(args, window_title, local_path='~/.metro',
 
     from .services import devices
     globals().update({
-        'devices': devices,
+        'loadDevice': devices.load,
+        'createDevice': devices.create,
         'getDevice': devices.get,
         'getAllDevices': devices.getAll,
         'getOperator': devices.getOperator,
         'getAllOperators': devices.getAllOperators,
+        'killAllDevices': devices.killAll,
+        'getAvailableDeviceName': devices.getAvailableName,
+        'getDefaultDeviceName': devices.getDefaultName,
+        'findDeviceForChannel': devices.findDeviceForChannel,
+        'checkForDeviceLeaks': devices.checkForLeaks,
         'OperatorThread': devices.OperatorThread,
         'GenericDevice': devices.GenericDevice,
         'DisplayDevice': devices.DisplayDevice,
         'CoreDevice': devices.CoreDevice,
         'TransientDevice': devices.TransientDevice,
-        'WidgetDevice': devices.WidgetDevice
+        'WidgetDevice': devices.WidgetDevice,
+        'DeviceGroup': devices.DeviceGroup,
+        'WindowGroupWidget': devices.WindowGroupWidget,
+        'TabGroupWidget': devices.TabGroupWidget
     })
 
     from .frontend import arguments

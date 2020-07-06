@@ -15,7 +15,6 @@ import numpy  # noqa
 
 import metro
 from metro.services import profiles
-from metro import devices
 
 if not metro.core_mode:
     from metro.frontend import controller
@@ -146,7 +145,7 @@ class AbstractApplication(object):
         args.update(abstract_args)
 
         try:
-            devices.create(entry_point, name, args=args, state=state)
+            metro.createDevice(entry_point, name, args=args, state=state)
         except Exception as e:
             self.showException('An error occured on creating a device:', e)
 
@@ -417,7 +416,7 @@ class AbstractApplication(object):
 
             try:
                 device_classes[value['entry_point']] = \
-                    devices.load(value['entry_point'])
+                    metro.loadDevice(value['entry_point'])
             except KeyError:
                 if 'path' in value or 'module' in value:
                     return self.showError(
@@ -504,7 +503,7 @@ class AbstractApplication(object):
             device_list = [d.getDeviceName() for d in metro.getAllDevices()]
 
         for name in device_list:
-            device = devices.get(name)
+            device = metro.getDevice(name)
 
             if device._parent is not None:
                 continue
@@ -589,10 +588,10 @@ class AbstractApplication(object):
         else:
             self.indicators[key] = value
 
-    def addDeviceGroup(self, dev_grp: devices.DeviceGroup):
+    def addDeviceGroup(self, dev_grp: metro.DeviceGroup):
         self.device_groups.append(dev_grp)
 
-    def removeDeviceGroup(self, dev_grp: devices.DeviceGroup):
+    def removeDeviceGroup(self, dev_grp: metro.DeviceGroup):
         self.device_groups.remove(dev_grp)
 
     @staticmethod
@@ -676,7 +675,7 @@ class CoreApplication(QtCore.QCoreApplication, AbstractApplication):
         return geometry_hash.hexdigest()
 
     def _loadDevice(self, entry_point, device_class, name, state):
-        if issubclass(device_class, devices.WidgetDevice):
+        if issubclass(device_class, metro.WidgetDevice):
             raise NotImplementedError('WidgetDevice not supported in core '
                                       'mode')
 
@@ -703,7 +702,7 @@ class CoreApplication(QtCore.QCoreApplication, AbstractApplication):
 
     def createNewDevice(self, entry_point, name=None, args={}):
         try:
-            device_class = devices.load(entry_point)
+            device_class = metro.loadDevice(entry_point)
         except ImportError as e:
             self.showError('An error occured when loading the device entry '
                            'point "{}":'.format(entry_point),
@@ -728,7 +727,7 @@ class CoreApplication(QtCore.QCoreApplication, AbstractApplication):
             return
 
         if name is None:
-            name = devices.getDefaultName(entry_point)
+            name = metro.getDefaultDeviceName(entry_point)
 
         if not issubclass(device_class, metro.TransientDevice):
             dialog = dialogs.NewDeviceDialog(name, device_class, args)
@@ -744,7 +743,7 @@ class CoreApplication(QtCore.QCoreApplication, AbstractApplication):
             final_args = {}
 
         try:
-            d = devices.create(final_name, entry_point, args=final_args)
+            d = metro.createDevice(final_name, entry_point, args=final_args)
         except Exception as e:
             self.showException('An error occured on constructing device '
                                '"{0}":'.format(final_name), e)
@@ -953,7 +952,7 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
 
     def createNewDevice(self, entry_point, name=None, args={}):
         try:
-            device_class = devices.load(entry_point)
+            device_class = metro.loadDevice(entry_point)
         except ImportError as e:
             self.showError('An error occured when loading the device entry '
                            'point "{}":'.format(entry_point),
@@ -978,7 +977,7 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
             return
 
         if name is None:
-            name = devices.getDefaultName(entry_point)
+            name = metro.getDefaultDeviceName(entry_point)
 
         if not issubclass(device_class, metro.TransientDevice):
             dialog = dialogs.NewDeviceDialog(name, device_class, args)
@@ -994,7 +993,7 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
             final_args = {}
 
         try:
-            d = devices.create(entry_point, final_name, args=final_args)
+            d = metro.createDevice(entry_point, final_name, args=final_args)
         except Exception as e:
             self.showException('An error occured on constructing device '
                                '"{0}":'.format(final_name), e)
@@ -1027,7 +1026,7 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
                 )
                 return
 
-        device_class = devices.load(entry_point)
+        device_class = metro.loadDevice(entry_point)
 
         try:
             if not device_class.isChannelSupported(channel):
@@ -1037,7 +1036,7 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
                            'device:', str(e))
             return None
 
-        device_name = devices.getAvailableName('{0}[{1}]'.format(
+        device_name = metro.getAvailableDeviceName('{0}[{1}]'.format(
             channel_name, entry_point[entry_point.rfind('.')+1:])
         )
 
@@ -1053,8 +1052,8 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
             display_device = self.createNewDevice(entry_point, device_name,
                                                   final_args)
         else:
-            display_device = devices.create(entry_point, device_name,
-                                            args=final_args)
+            display_device = metro.createDevice(entry_point, device_name,
+                                                args=final_args)
 
         return display_device
 
@@ -1087,7 +1086,7 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
         # to keep track of this state in the application object.
 
         if devices_list is None:
-            devices_list = devices.getAll()
+            devices_list = metro.getAllDevices()
 
         controller_pixmap = self.main_window.grab()
         regular_device_pixmaps = []

@@ -11,7 +11,6 @@ from PyQt5 import QtWidgets
 from PyQt5 import uic as QtUic
 
 import metro
-from metro import devices
 from metro.services import measure
 from metro.frontend import arguments
 
@@ -112,7 +111,7 @@ class ConfigMeasurementDialog(QtWidgets.QDialog):
                 if op_name == self.op_name:
                     new_action.setChecked(True)
 
-            ops = getattr(devices._operators, self.op_key)
+            ops = metro.getAllOperators(self.op_key)
 
             if len(self.builtins) > 0 and len(ops) > 0:
                 self.menu.addSeparator()

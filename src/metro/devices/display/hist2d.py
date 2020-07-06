@@ -1469,7 +1469,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
         else:
             self.ch_in = args['channel']
 
-            ch_dev = metro.devices.findDeviceForChannel(self.ch_in.name)
+            ch_dev = metro.findDeviceForChannel(self.ch_in.name)
 
             if ch_dev is not None and ch_dev >= 'project.generic2d':
                 self.proj_dev = ch_dev
