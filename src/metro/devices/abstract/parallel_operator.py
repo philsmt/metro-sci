@@ -25,8 +25,7 @@ import threading
 import traceback
 
 import metro
-metro.init_mp_support()
-
+metro.init_metro()
 
 _targets = {}
 Target = collections.namedtuple('Target', ['name', 'process', 'active',
