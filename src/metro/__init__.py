@@ -276,10 +276,3 @@ def start(prog_name='metro', window_title='Metro', cli_hook=None):
 
     app = app_class(args, argv_left)
     app.exec_()
-
-
-# Initialize metro per default in core mode, unless it is imported by the
-# installed metro app (check for call via setuptools entry_point).
-# import inspect
-# if "load_entry_point('metro-sci'" not in inspect.stack()[-1][-2][0]:
-#     init_core()
