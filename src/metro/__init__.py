@@ -65,12 +65,14 @@ def init_core():
 
     import sys
 
-    def die(msg):
-        print('Fatal error during initialization: ' + msg)
-        sys.exit(0)
+    if not load_GUI:
+        def die(msg):
+            print('Fatal error during initialization: ' + msg)
+            sys.exit(0)
+        globals().update({'die': die})
 
     if sys.version_info[:2] < (3, 3):
-        die('Requires python version >= 3.3 (found {0})'.format(
+        globals()['die']('Requires python version >= 3.3 (found {0})'.format(
             sys.version[:sys.version.find(' ')]
         ))
 
@@ -110,7 +112,7 @@ def init_core():
         globals().update({
             'QtGui':     QtGui,
             'QtWidgets': QtWidgets,
-            'QtUic':     QtUic,
+            'QtUic':     QtUic
         })
 
     from .services import channels
@@ -184,16 +186,6 @@ def init_gui():
     elif load_GUI:
         return # already initialized GUI modules
 
-    try:
-        from PyQt5 import QtGui      # noqa (F401)
-        from PyQt5 import QtWidgets  # noqa (F401)
-        from PyQt5 import uic as QtUic
-    except ImportError as e:
-        die('An essential dependency ({0}) could not be imported and is '
-            'probably missing'.format(str(e)[str(e)[:-1].rfind('\'')+1:-1]))
-
-    import sys
-
     def die(msg):
         if sys.version_info[0] == 2:
             import Tkinter  # different name in python2
@@ -202,6 +194,10 @@ def init_gui():
             import tkinter
 
         root = tkinter.Tk()
+        try:
+            window_title = globals()['WINDOW_TITLE']
+        except KeyError:
+            window_title = 'Metro'
         root.wm_title(window_title)
 
         frame = tkinter.Frame(borderwidth=5)
@@ -219,6 +215,16 @@ def init_gui():
         frame.mainloop()
 
         sys.exit(0)
+
+    try:
+        from PyQt5 import QtGui      # noqa (F401)
+        from PyQt5 import QtWidgets  # noqa (F401)
+        from PyQt5 import uic as QtUic
+    except ImportError as e:
+        die('An essential dependency ({0}) could not be imported and is '
+            'probably missing'.format(str(e)[str(e)[:-1].rfind('\'')+1:-1]))
+
+    import sys
 
     globals().update({
         'QtGui':     QtGui,
