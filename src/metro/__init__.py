@@ -54,13 +54,14 @@ def parse_args(prog_name, cli_hook=None):
 
     return cli.parse_known_args()
 
+load_GUI = None
 
 def init_core():
-    try:
-        if not globals()['load_GUI']:
-            return # already initialized in core mode
-    except KeyError:
-        globals()['load_GUI'] = False
+    global load_GUI
+    if load_GUI is None:
+        load_GUI = False # initialize in core mode
+    elif not load_GUI:
+        return # already initialized in core mode
 
     import sys
 
@@ -97,7 +98,7 @@ def init_core():
         'QConsts':   QtCore.Qt
     })
 
-    if not globals()['load_GUI']:
+    if not load_GUI:
         class EmptyQtModule:
             def __getattr__(self, name):
                 return QtCore.QObject
@@ -177,11 +178,11 @@ def init_core():
 
 
 def init_gui():
-    try:
-        if globals()['load_GUI']:
-            return # already initialized these
-    except KeyError:
-        globals()['load_GUI'] = True
+    global load_GUI
+    if load_GUI is None:
+        load_GUI = True # initialize GUI modules
+    elif load_GUI:
+        return # already initialized GUI modules
 
     try:
         from PyQt5 import QtGui      # noqa (F401)
