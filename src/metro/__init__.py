@@ -18,35 +18,35 @@ def parse_args(prog_name, cli_hook=None):
 
     cli_actions['profile'] = cli.add_argument(
         '--profile', dest='profile', action='store', type=str,
-        help='Load the given profile (either the name without .json '
+        help='load the given profile (either the name without .json '
              'relative to the profile directory or complete path) on '
-             'startup.'
+             'startup'
     )
 
     mode_group = cli.add_mutually_exclusive_group()
 
     cli_actions['kiosk'] = mode_group.add_argument(
         '--kiosk', dest='kiosk_mode', action='store_true',
-        help='Start in kiosk mode with hidden controller window and a '
-             'single visible device controlling the application state.'
+        help='start in kiosk mode with hidden controller window and a '
+             'single visible device controlling the application state'
     )
 
     cli_actions['core'] = mode_group.add_argument(
         '--core', dest='core_mode', action='store_true',
-        help='Start in core mode without a graphical interface and no '
-             'dependency on QtGui or QtWidgets.'
+        help='start in core mode without a graphical interface and no '
+             'dependency on QtGui or QtWidgets'
     )
 
     dev_group = cli.add_argument_group(title='development flags')
 
     cli_actions['experimental'] = dev_group.add_argument(
         '--experimental', dest='experimental', action='store_true',
-        help='Turns on various experimental features.'
+        help='turns on various experimental features'
     )
 
     cli_actions['gc-debug'] = dev_group.add_argument(
         '--gc-debug', dest='gc_debug', action='store', type=int, default=0,
-        help='Specify the debug level for the Python garbage collector.'
+        help='specify the debug level for the Python garbage collector'
     )
 
     if cli_hook is not None:
@@ -54,14 +54,16 @@ def parse_args(prog_name, cli_hook=None):
 
     return cli.parse_known_args()
 
+
 load_GUI = None
+
 
 def init_core():
     global load_GUI
     if load_GUI is None:
-        load_GUI = False # initialize in core mode
+        load_GUI = False  # initialize in core mode
     elif not load_GUI:
-        return # already initialized in core mode
+        return  # already initialized in core mode
 
     import sys
 
@@ -104,11 +106,11 @@ def init_core():
         class EmptyQtModule:
             def __getattr__(self, name):
                 return QtCore.QObject
-    
+
         QtGui     = EmptyQtModule()  # noqa
         QtWidgets = EmptyQtModule()  # noqa
-        QtUic     = EmptyQtModule()
-    
+        QtUic     = EmptyQtModule()  # noqa
+
         globals().update({
             'QtGui':     QtGui,
             'QtWidgets': QtWidgets,
@@ -182,9 +184,9 @@ def init_core():
 def init_gui():
     global load_GUI
     if load_GUI is None:
-        load_GUI = True # initialize GUI modules
+        load_GUI = True  # initialize GUI modules
     elif load_GUI:
-        return # already initialized GUI modules
+        return  # already initialized GUI modules
 
     def die(msg):
         if sys.version_info[0] == 2:
@@ -255,7 +257,7 @@ def init_metro(core_mode=False, kiosk_mode=False, window_title='Metro',
         'kiosk_mode':        kiosk_mode
     })
 
-    # Initialize GUI modules if not in core mode    
+    # Initialize GUI modules if not in core mode
     if not core_mode:
         init_gui()
 
