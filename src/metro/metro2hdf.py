@@ -554,7 +554,7 @@ def convert_hptdc_file(channel_file, h5ch, compress_args={},
 
                     if data_size < 0 or data_size % in_dtype.itemsize != 0:
                         print('WARNING: Invalid data_size entry {0} for step '
-                              '{0}, ignoring '
+                              '{1}, ignoring '
                               'tables...'.format(data_size, step_idx), end='')
 
                         step_table = None

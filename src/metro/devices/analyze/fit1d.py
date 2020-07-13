@@ -16,7 +16,7 @@ def gaussian(x, y0, A, x0, s):
     return y0+(0.3989422804/s)*A*numpy.exp((-1/2)*((x-x0)/s)**2)
 
 
-def lorentzian(x, y0, A, x0, l):
+def lorentzian(x, y0, A, x0, l):  # noqa
     return y0+(0.15915494309*A*l)/((x-x0)**2+((1/2)*l)**2)
 
 

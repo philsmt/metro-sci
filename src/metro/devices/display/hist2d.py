@@ -1755,8 +1755,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
             'roi': [(x['name'], x['coords'][0], x['coords'][1],
                      x['coords'][2], x['coords'][3])
                     for x in self.roi_map.values()],
-            'active_roi': active_roi['name'] \
-                          if active_roi is not None else None,
+            'active_roi': active_roi['name']
+                if active_roi is not None else None,  # noqa
             'mouse_proj': self.actionMouseModeProj.isChecked(),
             'axes': [self.imageDetector.axes['x_min'],
                      self.imageDetector.axes['x_max'],

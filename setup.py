@@ -54,9 +54,9 @@ setup(
             f'{entry_point} = metro.devices.{entry_point}:Device'
             for entry_point
             in [
-                'analyze.fit1d', 'analyze.moving_avg','analyze.scan_matrix',
+                'analyze.fit1d', 'analyze.moving_avg', 'analyze.scan_matrix',
                 'analyze.seq_cov',
-                    
+
                 'display.fast_plot', 'display.hist1d', 'display.hist2d',
                 'display.image', 'display.ogl_plot', 'display.plot',
                 'display.polar_plot', 'display.sorted', 'display.value',
@@ -66,11 +66,11 @@ setup(
 
                 'util.measure_blocks', 'util.memory',
                 'util.serial_scan_server', 'util.ui_web_proxy',
-                
+
                 'util.debug.arguments', 'util.debug.dependencies',
                 'util.debug.exception', 'util.debug.fail',
                 'util.debug.simple_device',
-                
+
                 'util.simulate.camera', 'util.simulate.indicators',
                 'util.simulate.logging', 'util.simulate.manual_operators',
                 'util.simulate.point_pos', 'util.simulate.random_vector',

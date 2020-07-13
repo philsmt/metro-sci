@@ -67,7 +67,7 @@ class DataImageItem(pyqtgraph.ImageItem):
             else self.image.shape[:2][::-1]
 
         if self._coords is None:
-            p.drawImage(metro.QtCore.QRectF(0,0,*shape), self.qimage)
+            p.drawImage(metro.QtCore.QRectF(0, 0, *shape), self.qimage)
         else:
             p.drawImage(metro.QtCore.QRectF(*self._coords), self.qimage)
 
