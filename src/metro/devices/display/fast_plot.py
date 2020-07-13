@@ -74,9 +74,9 @@ class RenderOperator(QtCore.QObject):
         if dev.idx_data is not None:
             for i in reversed(range(dev.idx_data.shape[0])):
                 try:
-                    _native.plot(dev.surface,
-                                 *dev.downsample(dev.x, dev.idx_data[i]),
-                                 i % n_colors, dev.show_marker)
+                    self.dev._plot(
+                        dev.surface, *dev.downsample(dev.x, dev.idx_data[i]),
+                        i % n_colors)
                 except ValueError:
                     print(dev.x.shape, dev.idx_data.shape)
 
@@ -92,13 +92,14 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
     arguments = {
         'channel': metro.ChannelArgument(),
+        'mode': ('lines', 'bars'),
         'index': metro.IndexArgument(),
         'bg_text': '',
         'mt_render': False,
         'style': tuple(COLOR_STYLES.keys()),
         'with_x': False,
         'show_marker': True,
-        'downsampling': 0,
+        'downsampling': 0
     }
 
     MOUSE_MOVE_PLOT_BEGIN = 0
@@ -114,10 +115,16 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
     renderingRequested = metro.QSignal()
 
     def prepare(self, args, state):
+        self.channel = args['channel']
         self.style = COLOR_STYLES[args['style']]
         self.with_x = args['with_x']
 
-        self.channel = args['channel']
+        if args['mode'] == 'lines':
+            self._plot = lambda *args: _native.plot(*args, self.show_marker)
+        elif args['mode'] == 'bars':
+            self._plot = lambda *args: \
+                _native.bars(*args, self.plot_geometry[2] // 100)
+
         self.roi_map = {}
 
         self.stacking_outp = None
@@ -696,11 +703,10 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
                 if self.idx_data is not None:
                     for i in reversed(range(self.idx_data.shape[0])):
-                        _native.plot(
+                        self._plot(
                             self.surface,
                             *self.downsample(self.x, self.idx_data[i]),
-                            i % len(self.style), self.show_marker
-                        )
+                            i % len(self.style))
 
                 for data in self.fit_data.values():
                     _native.plot(self.surface, data, 5, False)

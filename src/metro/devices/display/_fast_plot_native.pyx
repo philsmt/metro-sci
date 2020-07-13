@@ -99,6 +99,18 @@ cdef void draw_rect(surface* s, int x1, int y1, int w, int h, int c) nogil:
         draw_pixel(s, x2, y, c)
 
 
+cdef void fill_rect(surface* s, int x1, int y1, int w, int h, int c) nogil:
+    # Draw a filled rectangle with x1/y1 as its upper-left edge and size w/h in
+    # color c
+
+    cdef int x2 = x1 + w - 1
+    cdef int y2 = y1 + h - 1
+
+    for x from x1 <= x <= x2 by 1:
+        for y from y1 < y < y2 by 1:
+            draw_pixel(s, x, y, c)
+
+
 cdef inline void draw_square(surface* s, int x, int y, int l, int c) nogil:
     # Draw a square centered around x/y with length l in color c
 
@@ -300,3 +312,37 @@ def plot(uintptr_t s_bits,
 
                 last_x = cur_x
                 last_y = cur_y
+
+
+def bars(uintptr_t s_bits,
+         numpy.ndarray[x_t, ndim=1, mode="c"] data_x,
+         numpy.ndarray[y_t, ndim=1, mode="c"] data_y,
+         int color_idx, int width):
+
+    if len(data_x) != len(data_y):
+        raise ValueError('len(x) != len(y)')
+
+    cdef surface* s = <surface*>s_bits
+    cdef int N = data_y.shape[0], i, cur_x, cur_y, last_x, last_y, y0
+    cdef double datum
+
+    cdef int color = (color_idx + 1) * 10 + 1
+
+    last_x = <int>((<double>data_x[0] - s.start_x) * s.div_x) + s.offset_x
+    y0 = <int>((<double>0.0 - s.start_y) * s.div_y) + s.offset_y
+
+    with nogil:
+        for i in range(1, N):
+            datum = <double>data_y[i]
+
+            cur_x = <int>((<double>data_x[i] - s.start_x) * s.div_x) + s.offset_x
+            cur_y = <int>((datum - s.start_y) * s.div_y) + s.offset_y
+
+            if not ((last_x < s.offset_x and cur_x < s.offset_x) or
+                    (last_x > s.max_x and cur_x > s.max_x)):
+                if cur_y == y0:
+                    draw_line(s, cur_x - width//2, y0, cur_x + width//2, y0, color)
+                else:
+                    fill_rect(s, cur_x - width//2, min(y0, cur_y), width, abs(cur_y - y0), color)
+
+            last_x = cur_x
