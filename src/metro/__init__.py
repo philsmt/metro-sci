@@ -241,6 +241,8 @@ def init_metro(core_mode=False, kiosk_mode=False, window_title='Metro',
     import os
     import pkg_resources
 
+    src_path = os.path.dirname(os.path.realpath(__file__))
+
     local_path = os.path.expanduser(local_path)
     os.makedirs(local_path, exist_ok=True)
 
@@ -249,6 +251,7 @@ def init_metro(core_mode=False, kiosk_mode=False, window_title='Metro',
 
     globals().update({
         'WINDOW_TITLE':      window_title,
+        'SRC_ROOT':          src_path,
         'LOCAL_PATH':        local_path,
         'PROFILE_PATH':      profile_path,
         'resource_exists':   pkg_resources.resource_exists,
