@@ -10,7 +10,7 @@ import numpy as np
 
 import metro
 
-from devices.display import plot
+from metro.devices.display import plot
 
 
 class Device(plot.Device):
