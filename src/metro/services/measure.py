@@ -974,7 +974,7 @@ class CountLimit(QtCore.QObject, LimitOperator):
         self.update_timer = QtCore.QTimer()
         self.update_timer.setInterval(1000)
         self.update_timer.timeout.connect(self.updateTick)
-        self.reached.connect(self.timer.stop)
+        self.reached.connect(self.update_timer.stop)
 
     # Method for Subscriber interface to get channel count
     def dataSet(self, d: Any) -> None:
@@ -984,7 +984,7 @@ class CountLimit(QtCore.QObject, LimitOperator):
     def dataAdded(self, d: Any) -> None:
         self.current_counts += self.counter_func(d)
 
-        if self.current_counts >= self.limit_counts:
+        if self.current_counts >= self.limit:
             self.updated.emit(self.current_counts)
 
             self.current_counts = 0
@@ -998,7 +998,7 @@ class CountLimit(QtCore.QObject, LimitOperator):
     def start(self) -> None:
         self.current_counts = 0
 
-        self.timer.start()
+        self.update_timer.start()
 
     @QtCore.pyqtSlot()
     def updateTick(self) -> None:

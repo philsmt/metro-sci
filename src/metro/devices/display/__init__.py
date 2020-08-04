@@ -9,6 +9,8 @@ def getDefault(channel):
         if channel.hint == channel.INDICATOR_HINT:
             if channel.shape == 1:
                 return 'display.plot'
+            elif channel.shape == 2:
+                return 'display.plot_xy'
             else:
                 return 'display.value'
         elif channel.shape == 0 and channel.hint == channel.WAVEFORM_HINT:
