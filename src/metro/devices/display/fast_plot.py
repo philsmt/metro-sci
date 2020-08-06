@@ -1241,12 +1241,13 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self._notifyFittingCallbacks(self.x, self.idx_data[0])
 
         if self.stacking > 0.0:
-            if self.stacking_outp is None:
+            req_shape = (self.idx_data.shape[0],
+                         min(self.idx_data.shape[1], int(self.stacking)))
+
+            if self.stacking_outp is None or \
+                    self.stacking_outp.shape != req_shape:
                 self.stacking_outp = np.zeros(
-                    (self.idx_data.shape[0],
-                     min(self.idx_data.shape[1], int(self.stacking))),
-                    dtype=self.idx_data.dtype
-                )
+                    req_shape, dtype=self.idx_data.dtype)
 
             _native.stack(self.idx_data, self.stacking_outp, self.stacking)
 
