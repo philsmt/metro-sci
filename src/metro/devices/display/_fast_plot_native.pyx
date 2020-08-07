@@ -293,8 +293,10 @@ def plot(uintptr_t s_bits,
 
         if marker:
             for i in range(1, N):
-                cur_x = <int>((<double>data_x[i] - s.start_x) * s.div_x) + s.offset_x
-                cur_y = <int>((<double>data_y[i] - s.start_y) * s.div_y) + s.offset_y
+                cur_x = <int>((<double>data_x[i] - s.start_x) * s.div_x) \
+                    + s.offset_x
+                cur_y = <int>((<double>data_y[i] - s.start_y) * s.div_y) \
+                    + s.offset_y
 
                 if not ((last_x < s.offset_x and cur_x < s.offset_x) or
                         (last_x > s.max_x and cur_x > s.max_x)):
@@ -306,8 +308,10 @@ def plot(uintptr_t s_bits,
 
         else:
             for i in range(1, N):
-                cur_x = <int>((<double>data_x[i] - s.start_x) * s.div_x) + s.offset_x
-                cur_y = <int>((<double>data_y[i] - s.start_y) * s.div_y) + s.offset_y
+                cur_x = <int>((<double>data_x[i] - s.start_x) * s.div_x) \
+                    + s.offset_x
+                cur_y = <int>((<double>data_y[i] - s.start_y) * s.div_y) \
+                    + s.offset_y
 
                 if not ((last_x < s.offset_x and cur_x < s.offset_x) or
                         (last_x > s.max_x and cur_x > s.max_x)):
@@ -337,13 +341,16 @@ def bars(uintptr_t s_bits,
         for i in range(N):
             datum = <double>data_y[i]
 
-            cur_x = <int>((<double>data_x[i] - s.start_x) * s.div_x) + s.offset_x
+            cur_x = <int>((<double>data_x[i] - s.start_x) * s.div_x) \
+                + s.offset_x
             cur_y = <int>((datum - s.start_y) * s.div_y) + s.offset_y
 
             if cur_x >= s.offset_x and cur_x <= s.max_x:
                 if cur_y == y0:
-                    draw_line(s, cur_x - width//2, y0, cur_x + width//2, y0, color)
+                    draw_line(s, cur_x - width//2, y0, cur_x + width//2, y0,
+                              color)
                 else:
-                    fill_rect(s, cur_x - width//2, min(y0, cur_y), width, abs(cur_y - y0), color)
+                    fill_rect(s, cur_x - width//2, min(y0, cur_y), width,
+                              abs(cur_y - y0), color)
 
             last_x = cur_x
