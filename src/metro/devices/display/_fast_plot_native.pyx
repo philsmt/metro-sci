@@ -281,13 +281,16 @@ def plot(uintptr_t s_bits,
     cdef int line_color = (color_idx + 1) * 10 + 1
     cdef int symbol_color = line_color + 1
 
-    last_x = <int>((<double>data_x[0] - s.start_x) * s.div_x) + s.offset_x
-    last_y = <int>((<double>data_y[0] - s.start_y) * s.div_y) + s.offset_y
-
     # Clean up names in here: x/y in terms of data or render coordinates
     # is very misleading! Then we can also stop using s.x_max down there
 
     with nogil:
+        last_x = <int>((<double>data_x[0] - s.start_x) * s.div_x) + s.offset_x
+        last_y = <int>((<double>data_y[0] - s.start_y) * s.div_y) + s.offset_y
+
+        if marker and last_x >= s.offset_x and last_x <= s.max_x:
+            draw_square(s, last_x, last_y, 5, symbol_color)
+
         if marker:
             for i in range(1, N):
                 cur_x = <int>((<double>data_x[i] - s.start_x) * s.div_x) + s.offset_x
@@ -328,18 +331,16 @@ def bars(uintptr_t s_bits,
 
     cdef int color = (color_idx + 1) * 10 + 1
 
-    last_x = <int>((<double>data_x[0] - s.start_x) * s.div_x) + s.offset_x
-    y0 = <int>((<double>0.0 - s.start_y) * s.div_y) + s.offset_y
-
     with nogil:
-        for i in range(1, N):
+        y0 = <int>((<double>0.0 - s.start_y) * s.div_y) + s.offset_y
+
+        for i in range(N):
             datum = <double>data_y[i]
 
             cur_x = <int>((<double>data_x[i] - s.start_x) * s.div_x) + s.offset_x
             cur_y = <int>((datum - s.start_y) * s.div_y) + s.offset_y
 
-            if not ((last_x < s.offset_x and cur_x < s.offset_x) or
-                    (last_x > s.max_x and cur_x > s.max_x)):
+            if cur_x >= s.offset_x and cur_x <= s.max_x:
                 if cur_y == y0:
                     draw_line(s, cur_x - width//2, y0, cur_x + width//2, y0, color)
                 else:
