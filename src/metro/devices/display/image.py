@@ -16,6 +16,15 @@ from metro.devices.abstract import fittable_plot
 
 pyqtgraph.setConfigOptions(antialias=False)
 
+# Create a default gradient, which is almost viridis. It adds a new
+# lower bracket though for very small values (< 1e-3 relatively) which
+# is pure black.
+from metro.external.pyqtgraph.graphicsItems.GradientEditorItem \
+    import Gradients
+default_gradient = Gradients['viridis'].copy()
+default_gradient['ticks'][0] = (1e-3, default_gradient['ticks'][0][1])
+default_gradient['ticks'].insert(0, (0.0, (0, 0, 0, 255)))
+
 
 class DataImageItem(pyqtgraph.ImageItem):
     def __init__(self, *args, **kwargs):
@@ -159,10 +168,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             self.actionAutoScale.setChecked(state[1])
             self.displayImage.ui.histogram.gradient.restoreState(state[2])
         else:
-            from metro.external.pyqtgraph.graphicsItems.GradientEditorItem \
-                import Gradients
             self.displayImage.ui.histogram.gradient.restoreState(
-                Gradients['viridis'])
+                default_gradient)
 
         self.channel = args['channel']
         self.channel.subscribe(self)
