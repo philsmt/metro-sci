@@ -59,8 +59,8 @@ setup(
 
                 'display.fast_plot', 'display.hist1d', 'display.hist2d',
                 'display.image', 'display.ogl_plot', 'display.plot',
-                'display.polar_plot', 'display.sorted', 'display.value',
-                'display.waveform',
+                'display.plot_xy', 'display.polar_plot', 'display.sorted',
+                'display.value', 'display.waveform',
 
                 'project.generic2d', 'project.window',
 
@@ -85,7 +85,7 @@ setup(
             f'display.{entry_point} = devices.display.{entry_point}:Device'
             for entry_point
             in [
-                'fast_plot', 'hist1d', 'hist2d', 'image', 'plot',
+                'fast_plot', 'hist1d', 'hist2d', 'image', 'plot', 'plot_xy',
                 'polar_plot', 'sorted', 'value', 'waveform'
             ]
         ]
