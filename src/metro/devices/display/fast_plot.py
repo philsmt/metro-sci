@@ -1238,6 +1238,9 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             self.x_label = self.y_label = self.legend_entries = \
                 self.vlines = self.hlines = None
 
+        if self.idx_data.shape[1] == 0:
+            return
+
         self._notifyFittingCallbacks(self.x, self.idx_data[0])
 
         if self.stacking > 0.0:
