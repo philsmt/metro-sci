@@ -1275,6 +1275,9 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             if y_pad != 0.0:
                 self.plot_axes[2] = y_min - y_pad
                 self.plot_axes[3] = y_max + y_pad
+            elif self.idx_data.shape[1] == 1:
+                self.plot_axes[2] = 0.9*y_min
+                self.plot_axes[3] = 1.1*y_min
 
         self.repaint(axes_changed=self.autoscale_x or self.autoscale_y,
                      data_changed=True)
