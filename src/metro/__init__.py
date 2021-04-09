@@ -83,8 +83,9 @@ def init_core():
         import numpy              # noqa (F401)
         from PyQt5 import QtCore  # noqa (F401)
     except ImportError as e:
-        die('An essential dependency ({0}) could not be imported and is '
-            'probably missing'.format(str(e)[str(e)[:-1].rfind('\'')+1:-1]))
+        globals()['die']('An essential dependency ({0}) could not be '
+                         'imported and is probably missing'.format(
+                             str(e)[str(e)[:-1].rfind('\'')+1:-1]))
 
     # Populate the metro namespace with a variety of internal modules
     # and parts of Qt. In core mode, several of those are simulated by
@@ -274,7 +275,7 @@ def start(prog_name='metro', window_title='Metro', cli_hook=None):
 
     from .frontend import application
 
-    if core_mode: # noqa
+    if args.core_mode:
         app_class = application.CoreApplication
     else:
         app_class = application.GuiApplication
