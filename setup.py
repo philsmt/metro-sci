@@ -54,7 +54,8 @@ setup(
             f'{entry_point} = metro.devices.{entry_point}:Device'
             for entry_point
             in [
-                'analyze.fit1d', 'analyze.moving_avg', 'analyze.scan_matrix',
+                'analyze.angular_integrate', 'analyze.fit1d',
+                'analyze.moving_avg', 'analyze.scan_matrix',
                 'analyze.seq_cov',
 
                 'display.fast_plot', 'display.hist1d', 'display.hist2d',
