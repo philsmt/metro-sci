@@ -71,14 +71,17 @@ class RenderOperator(QtCore.QObject):
 
         dev = self.dev
 
-        if dev.idx_data is not None:
-            for i in reversed(range(dev.idx_data.shape[0])):
+        if dev.plot_y is not None:
+            for i in reversed(range(dev.plot_y.shape[0])):
                 try:
                     self.dev._plot(
-                        dev.surface, *dev.downsample(dev.x, dev.idx_data[i]),
+                        dev.surface,
+                        *dev.downsample(dev.plot_x, dev.plot_y[i]),
                         i % n_colors)
                 except ValueError:
-                    print(dev.x.shape, dev.idx_data.shape)
+                    # Probably a race condition, when a context switch
+                    # occurs in between changes?
+                    print(dev.plot_x.shape, dev.plot_y.shape)
 
         for data in dev.fit_data.values():
             _native.plot(dev.surface, data, 5, False)
@@ -101,6 +104,10 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         'show_marker': True,
         'downsampling': 0
     }
+
+    AXIS_MODE_LINEAR = 0
+    AXIS_MODE_LOG = 1
+    AXIS_MODE_POWER = 2
 
     MOUSE_MOVE_PLOT_BEGIN = 0
     MOUSE_MOVE_PLOT_ON = 1
@@ -143,10 +150,14 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
         self.surface = _native.surface_new()
 
-        self.x = None
-        self.ch_data = None
-        self.idx_data = None
+        self.ch_data = None  # raw channel data (may be ndarray or xarray)
+        self.x = None  # raw X data
+        self.idx_data = None  # indexed Y data
         self.fit_data = {}
+
+        # What plotted after transformation/masking
+        self.plot_x = None
+        self.plot_y = None
 
         self.data_img = None
 
@@ -169,6 +180,12 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.current_roi = state.pop('current_roi', None)
         self.autoscale_x = state.pop('autoscale_x', True)
         self.autoscale_y = state.pop('autoscale_y', True)
+        self.axis_mode_x = state.pop('axis_mode_x', self.AXIS_MODE_LINEAR)
+        self.axis_mode_y = state.pop('axis_mode_y', self.AXIS_MODE_LINEAR)
+        self.log_base_x = state.pop('log_base_x', 10.0)
+        self.log_base_y = state.pop('log_base_y', 10.0)
+        self.power_exponent_x = state.pop('power_exponent_x', 2.0)
+        self.power_exponent_y = state.pop('power_exponent_y', 2.0)
         self.stacking = state.pop('stacking', 0.0)
         self.show_marker = state.pop('show_marker', args['show_marker'])
         self.show_legend = state.pop('show_legend', True)
@@ -211,17 +228,44 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.actionViewAll = self.menuContext.addAction('View all')
 
         self.menuAxisX = self.menuContext.addMenu('X axis')
-        self.groupAxisX = QtWidgets.QActionGroup(self.menuAxisX)
+        self.groupAxisControlX = QtWidgets.QActionGroup(self.menuAxisX)
+        self.groupAxisModeX = QtWidgets.QActionGroup(self.menuAxisX)
 
         self.actionAxisX_Auto = self.menuAxisX.addAction('Auto')
         self.actionAxisX_Auto.setCheckable(True)
         self.actionAxisX_Auto.setChecked(self.autoscale_x)
-        self.groupAxisX.addAction(self.actionAxisX_Auto)
+        self.groupAxisControlX.addAction(self.actionAxisX_Auto)
 
         self.actionAxisX_Manual = self.menuAxisX.addAction('Manual...')
         self.actionAxisX_Manual.setCheckable(True)
         self.actionAxisX_Manual.setChecked(not self.autoscale_x)
-        self.groupAxisX.addAction(self.actionAxisX_Manual)
+        self.groupAxisControlX.addAction(self.actionAxisX_Manual)
+
+        self.menuAxisX.addSeparator()
+
+        self.actionAxisX_Linear = self.menuAxisX.addAction('Linear')
+        self.actionAxisX_Linear.setCheckable(True)
+        self.actionAxisX_Linear.setChecked(
+            self.axis_mode_x == self.AXIS_MODE_LINEAR)
+        self.groupAxisModeX.addAction(self.actionAxisX_Linear)
+
+        self.actionAxisX_Log10 = self.menuAxisX.addAction('Log 10')
+        self.actionAxisX_Log10.setCheckable(True)
+        self.actionAxisX_Log10.setChecked(
+            self.axis_mode_x == self.AXIS_MODE_LOG and self.log_base_x == 10.0)
+        self.groupAxisModeX.addAction(self.actionAxisX_Log10)
+
+        self.actionAxisX_Log = self.menuAxisX.addAction('Log...')
+        self.actionAxisX_Log.setCheckable(True)
+        self.actionAxisX_Log.setChecked(
+            self.axis_mode_x == self.AXIS_MODE_LOG and self.log_base_x != 10.0)
+        self.groupAxisModeX.addAction(self.actionAxisX_Log)
+
+        self.actionAxisX_Pow = self.menuAxisX.addAction('Power...')
+        self.actionAxisX_Pow.setCheckable(True)
+        self.actionAxisX_Pow.setChecked(
+            self.axis_mode_x == self.AXIS_MODE_POWER)
+        self.groupAxisModeX.addAction(self.actionAxisX_Pow)
 
         self.menuAxisX.addSeparator()
 
@@ -234,17 +278,44 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         )
 
         self.menuAxisY = self.menuContext.addMenu('Y axis')
-        self.groupAxisY = QtWidgets.QActionGroup(self.menuAxisY)
+        self.groupAxisControlY = QtWidgets.QActionGroup(self.menuAxisY)
+        self.groupAxisModeY = QtWidgets.QActionGroup(self.menuAxisY)
 
         self.actionAxisY_Auto = self.menuAxisY.addAction('Auto')
         self.actionAxisY_Auto.setCheckable(True)
         self.actionAxisY_Auto.setChecked(self.autoscale_y)
-        self.groupAxisY.addAction(self.actionAxisY_Auto)
+        self.groupAxisControlY.addAction(self.actionAxisY_Auto)
 
         self.actionAxisY_Manual = self.menuAxisY.addAction('Manual...')
         self.actionAxisY_Manual.setCheckable(True)
         self.actionAxisY_Manual.setChecked(not self.autoscale_y)
-        self.groupAxisY.addAction(self.actionAxisY_Manual)
+        self.groupAxisControlY.addAction(self.actionAxisY_Manual)
+
+        self.menuAxisY.addSeparator()
+
+        self.actionAxisY_Linear = self.menuAxisY.addAction('Linear')
+        self.actionAxisY_Linear.setCheckable(True)
+        self.actionAxisY_Linear.setChecked(
+            self.axis_mode_y == self.AXIS_MODE_LINEAR)
+        self.groupAxisModeY.addAction(self.actionAxisY_Linear)
+
+        self.actionAxisY_Log10 = self.menuAxisY.addAction('Log 10')
+        self.actionAxisY_Log10.setCheckable(True)
+        self.actionAxisY_Log10.setChecked(
+            self.axis_mode_y == self.AXIS_MODE_LOG and self.log_base_y == 10.0)
+        self.groupAxisModeY.addAction(self.actionAxisY_Log10)
+
+        self.actionAxisY_Log = self.menuAxisY.addAction('Log...')
+        self.actionAxisY_Log.setCheckable(True)
+        self.actionAxisY_Log.setChecked(
+            self.axis_mode_y == self.AXIS_MODE_LOG and self.log_base_y != 10.0)
+        self.groupAxisModeY.addAction(self.actionAxisY_Log)
+
+        self.actionAxisY_Pow = self.menuAxisY.addAction('Power...')
+        self.actionAxisY_Pow.setCheckable(True)
+        self.actionAxisY_Pow.setChecked(
+            self.axis_mode_y == self.AXIS_MODE_POWER)
+        self.groupAxisModeY.addAction(self.actionAxisY_Pow)
 
         self.menuAxisY.addSeparator()
 
@@ -380,6 +451,12 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             'title': self.title_text,
             'autoscale_x': self.autoscale_x,
             'autoscale_y': self.autoscale_y,
+            'axis_mode_x': self.axis_mode_x,
+            'axis_mode_y': self.axis_mode_y,
+            'log_base_x': self.log_base_x,
+            'log_base_y': self.log_base_y,
+            'power_exponent_x': self.power_exponent_x,
+            'power_exponent_y': self.power_exponent_y,
             'axes': self.plot_axes.tolist(),
             'stacking': self.stacking,
             'show_marker': self.show_marker,
@@ -585,7 +662,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
             p.restore()
 
-        # Data image
+        # Data image.
         p.drawImage(self.rect(), self.data_img)
 
         p.setPen(self.axis_pen)
@@ -679,6 +756,53 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
     def repaint(self, axes_changed=False, data_changed=False,
                 roi_changed=False, title_changed=False):
 
+        if data_changed and self.x is not None and self.idx_data is not None:
+            if self.axis_mode_x == self.AXIS_MODE_LINEAR:
+                x_mask = None
+                self.plot_x = self.x
+            elif self.axis_mode_x == self.AXIS_MODE_LOG:
+                x_mask = self.x > 0
+                self.plot_x = np.log(self.x[x_mask]) \
+                    / np.log(self.log_base_x)
+            elif self.axis_mode_x == self.AXIS_MODE_POWER:
+                x_mask = None
+                self.plot_x = np.power(self.x, self.power_exponent_x)
+
+            self.plot_y = self.idx_data
+
+            if x_mask is not None:
+                self.plot_y = self.plot_y[:, x_mask]
+
+            if self.axis_mode_y == self.AXIS_MODE_LOG:
+                y_mask = (self.plot_y > 0).all(axis=0)
+                self.plot_x = self.plot_x[y_mask]
+                self.plot_y = np.log(self.plot_y[:, y_mask]) \
+                    / np.log(self.log_base_y)
+            elif self.axis_mode_y == self.AXIS_MODE_POWER:
+                self.plot_y = np.power(self.plot_y, self.power_exponent_y)
+
+            if self.autoscale_x:
+                x_min = self.plot_x.min()
+                x_max = self.plot_x.max()
+
+                x_pad = (x_max - x_min) * 0.03
+
+                if x_pad == 0.0:
+                    x_pad = 1.0
+
+                self.plot_axes[0] = x_min - x_pad
+                self.plot_axes[1] = x_max + x_pad
+
+            if self.autoscale_y:
+                y_min = self.plot_y.min()
+                y_max = self.plot_y.max()
+
+                y_pad = (y_max - y_min) * 0.02
+
+                if y_pad != 0.0:
+                    self.plot_axes[2] = y_min - y_pad
+                    self.plot_axes[3] = y_max + y_pad
+
         if axes_changed:
             data_changed = True
             roi_changed = True
@@ -701,11 +825,11 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             else:
                 _native.surface_clear(self.surface)
 
-                if self.idx_data is not None:
-                    for i in reversed(range(self.idx_data.shape[0])):
+                if self.plot_y is not None:
+                    for i in reversed(range(self.plot_y.shape[0])):
                         self._plot(
                             self.surface,
-                            *self.downsample(self.x, self.idx_data[i]),
+                            *self.downsample(self.plot_x, self.plot_y[i]),
                             i % len(self.style))
 
                 for data in self.fit_data.values():
@@ -787,8 +911,12 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
         return r
 
-    def _computeTicks(self, start, end, offset, div, max_ticks, minor_ticks,
-                      label_fmt):
+    def _computeTicksLinear(self, idx, max_ticks, minor_ticks, label_fmt):
+        start = self.plot_axes[2 * idx]
+        end = self.plot_axes[2 * idx + 1]
+        offset = self.plot_geometry[idx]
+        div = self.plot_transform[idx]
+
         interval = max(1, end - start)
         frac = interval / max_ticks
 
@@ -823,17 +951,105 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
         return labels, major_pos, minor_pos
 
-    def _computeTicksForAxis(self, idx, max_ticks, minor_ticks, label_fmt):
+    def _computeTicksLog(self, idx, max_ticks, minor_ticks, label_fmt, base):
         start = self.plot_axes[2 * idx]
         end = self.plot_axes[2 * idx + 1]
         offset = self.plot_geometry[idx]
         div = self.plot_transform[idx]
 
-        return self._computeTicks(start, end, offset, div, max_ticks,
-                                  minor_ticks, label_fmt)
+        interval = max(1, end - start)
+        frac = interval / max_ticks
+
+        dim = floor(log10(frac))
+        tick = pow(10, dim)
+
+        while interval // tick > max_ticks:
+            tick += 10**dim
+
+        value = ceil(start / tick) * tick
+        try:
+            labels = [label_fmt.format(pow(base, value))]
+        except ValueError:
+            labels = []
+        major_pos = [(value - start) * div + offset]
+        minor_pos = []
+
+        while True:
+            for i in range(1, minor_ticks+1):
+                minor_value = value + tick*(i/(minor_ticks+1))
+
+                if minor_value > end:
+                    break
+
+                minor_pos.append((minor_value - start) * div + offset)
+
+            value = value + tick
+
+            if value > end:
+                break
+
+            try:
+                labels.append(label_fmt.format(
+                    pow(base, value)))
+            except ValueError:
+                pass
+
+            major_pos.append((value - start) * div + offset)
+
+        return labels, major_pos, minor_pos
+
+    def _computeTicksPower(self, idx, max_ticks, minor_ticks, label_fmt,
+                           exponent):
+        start = self.plot_axes[2 * idx]
+        end = self.plot_axes[2 * idx + 1]
+        offset = self.plot_geometry[idx]
+        div = self.plot_transform[idx]
+
+        interval = max(1, end - start)
+        frac = interval / max_ticks
+
+        dim = floor(log10(frac))
+        tick = pow(10, dim)
+
+        while interval // tick > max_ticks:
+            tick += 10**dim
+
+        tick_dim = -int(np.log10(tick)) + 1
+        value = ceil(start / tick) * tick
+        if value >= 0:
+            labels = [label_fmt.format(
+                round(pow(value, 1/exponent), tick_dim))]
+            major_pos = [(value - start) * div + offset]
+        else:
+            labels = []
+            major_pos = []
+
+        minor_pos = []
+
+        while True:
+            for i in range(1, minor_ticks+1):
+                minor_value = value + tick*(i/(minor_ticks+1))
+
+                if minor_value > end:
+                    break
+
+                if minor_value >= 0:
+                    minor_pos.append((minor_value - start) * div + offset)
+
+            value = value + tick
+
+            if value > end:
+                break
+
+            if value >= 0:
+                labels.append(label_fmt.format(
+                    round(pow(value, 1/exponent), tick_dim)))
+                major_pos.append((value - start) * div + offset)
+
+        return labels, major_pos, minor_pos
 
     def _buildAxes(self, p):
-        # Probably unnecessary
+        # Probably unnecessary?
         self.axes_texts.clear()
         self.axes_lines.clear()
 
@@ -842,11 +1058,18 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         height = self.size().height()
 
         # X axis
-        labels_x, major_pos_x, minor_pos_x = self._computeTicksForAxis(
-            0, self.plot_geometry[2] // 40, 3, '{:g}'
-        )
-        flags = QtConsts.AlignHCenter | QtConsts.AlignTop
+        if self.axis_mode_x == self.AXIS_MODE_LINEAR:
+            labels_x, major_pos_x, minor_pos_x = self._computeTicksLinear(
+                0, self.plot_geometry[2] // 40, 3, '{:g}')
+        elif self.axis_mode_x == self.AXIS_MODE_LOG:
+            labels_x, major_pos_x, minor_pos_x = self._computeTicksLog(
+                0, self.plot_geometry[2] // 40, 3, '{:g}', self.log_base_x)
+        elif self.axis_mode_x == self.AXIS_MODE_POWER:
+            labels_x, major_pos_x, minor_pos_x = self._computeTicksPower(
+                0, self.plot_geometry[2] // 40, 3, '{:g}',
+                self.power_exponent_x)
 
+        flags = QtConsts.AlignHCenter | QtConsts.AlignTop
         prev_r = None
 
         for i in range(len(labels_x)):
@@ -874,9 +1097,17 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         ))
 
         # Y axis
-        labels_y, major_pos_y, minor_pos_y = self._computeTicksForAxis(
-            1, self.plot_geometry[3] // 25, 3, '{:.3g}'
-        )
+        if self.axis_mode_y == self.AXIS_MODE_LINEAR:
+            labels_y, major_pos_y, minor_pos_y = self._computeTicksLinear(
+                1, self.plot_geometry[3] // 25, 3, '{:.3g}')
+        elif self.axis_mode_y == self.AXIS_MODE_LOG:
+            labels_y, major_pos_y, minor_pos_y = self._computeTicksLog(
+                1, self.plot_geometry[3] // 25, 3, '{:1.1e}', self.log_base_y)
+        elif self.axis_mode_y == self.AXIS_MODE_POWER:
+            labels_y, major_pos_y, minor_pos_y = self._computeTicksPower(
+                1, self.plot_geometry[3] // 25, 3, '{:.3g}',
+                self.power_exponent_y)
+
         flags = QtConsts.AlignVCenter | QtConsts.AlignRight
 
         for i in range(len(labels_y)):
@@ -1078,6 +1309,92 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             self.plot_axes[2:4] = limits
             self.repaint(axes_changed=True)
 
+        elif action == self.actionAxisX_Linear:
+            self.axis_mode_x = self.AXIS_MODE_LINEAR
+
+            if self.autoscale_x:
+                self.repaint(data_changed=True, axes_changed=True)
+
+        elif action == self.actionAxisX_Log10:
+            self.axis_mode_x = self.AXIS_MODE_LOG
+            self.log_base_x = 10.0
+
+            if self.autoscale_x:
+                self.repaint(data_changed=True, axes_changed=True)
+
+        elif action == self.actionAxisX_Log:
+            value, confirmed = QtWidgets.QInputDialog.getDouble(
+                None, self.windowTitle(), 'Base for logarithmic X axis',
+                value=self.log_base_x, decimals=3
+            )
+
+            if not confirmed:
+                return
+
+            self.axis_mode_x = self.AXIS_MODE_LOG
+            self.log_base_x = value
+
+            if self.autoscale_x:
+                self.repaint(data_changed=True, axes_changed=True)
+
+        elif action == self.actionAxisX_Pow:
+            value, confirmed = QtWidgets.QInputDialog.getDouble(
+                None, self.windowTitle(), 'Exponent for potentized X axis',
+                value=self.power_exponent_x, decimals=3
+            )
+
+            if not confirmed:
+                return
+
+            self.axis_mode_x = self.AXIS_MODE_POWER
+            self.power_exponent_x = value
+
+            if self.autoscale_x:
+                self.repaint(data_changed=True, axes_changed=True)
+
+        elif action == self.actionAxisY_Linear:
+            self.axis_mode_y = self.AXIS_MODE_LINEAR
+
+            if self.autoscale_y:
+                self.repaint(data_changed=True, axes_changed=True)
+
+        elif action == self.actionAxisY_Log10:
+            self.axis_mode_y = self.AXIS_MODE_LOG
+            self.log_base_y = 10.0
+
+            if self.autoscale_y:
+                self.repaint(data_changed=True, axes_changed=True)
+
+        elif action == self.actionAxisY_Log:
+            value, confirmed = QtWidgets.QInputDialog.getDouble(
+                None, self.windowTitle(), 'Base for logarithmic Y axis',
+                value=self.log_base_y, decimals=3
+            )
+
+            if not confirmed:
+                return
+
+            self.axis_mode_y = self.AXIS_MODE_LOG
+            self.log_base_y = value
+
+            if self.autoscale_y:
+                self.repaint(data_changed=True, axes_changed=True)
+
+        elif action == self.actionAxisY_Pow:
+            value, confirmed = QtWidgets.QInputDialog.getDouble(
+                None, self.windowTitle(), 'Exponent for potentized Y axis',
+                value=self.power_exponent_y, decimals=3
+            )
+
+            if not confirmed:
+                return
+
+            self.axis_mode_y = self.AXIS_MODE_POWER
+            self.power_exponent_y = value
+
+            if self.autoscale_y:
+                self.repaint(data_changed=True, axes_changed=True)
+
         elif action == self.actionStacking:
             value, confirmed = QtWidgets.QInputDialog.getDouble(
                 None, self.windowTitle(), 'Number of channels after which '
@@ -1252,28 +1569,6 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
             self.x = self.x[:self.stacking_outp.shape[1]]
             self.idx_data = self.stacking_outp
-
-        if self.autoscale_x:
-            x_min = self.x.min()
-            x_max = self.x.max()
-
-            x_pad = (x_max - x_min) * 0.03
-
-            if x_pad == 0.0:
-                x_pad = 1.0
-
-            self.plot_axes[0] = x_min - x_pad
-            self.plot_axes[1] = x_max + x_pad
-
-        if self.autoscale_y:
-            y_min = self.idx_data.min()
-            y_max = self.idx_data.max()
-
-            y_pad = (y_max - y_min) * 0.02
-
-            if y_pad != 0.0:
-                self.plot_axes[2] = y_min - y_pad
-                self.plot_axes[3] = y_max + y_pad
 
         self.repaint(axes_changed=self.autoscale_x or self.autoscale_y,
                      data_changed=True)
