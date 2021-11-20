@@ -20,11 +20,10 @@ class Device(plot.Device):
 
     def dataAdded(self, d):
 
-        #  d = d[self.index, :]
+        d = d[self.index, :]
 
         self.buffer[d[0, 0]] = d[0, 1]
         self.items = np.array(list(self.buffer.items()))
-#        print(self.items)
 
         if len(self.items) <= 1:
             x = self.items[:, 0]
@@ -33,10 +32,6 @@ class Device(plot.Device):
             items = self.items[self.items[:, 0].argsort(axis=0)]
             x = items[:, 0]
             y = items[:, 1]
-
-#        y = list()
-#        for i in x:
-#            y.append(self.buffer[i])
 
         self.curve.setData(x, y, autoDownsample=False, antialias=False)
         self._notifyFittingCallbacks(x, y)

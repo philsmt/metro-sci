@@ -57,7 +57,11 @@ class Device(metro.CoreDevice):
                 return
 
         self.mtx[self.current_idx, :] = spec
-        self.current_idx += 1
+
+        if self.current_idx < len(self.x)-1:
+            self.current_idx += 1
+        else:
+            self.current_idx = 0
 
         self.ch_out.addData(self.mtx)
 
