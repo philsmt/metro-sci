@@ -1238,15 +1238,19 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             self.x_label = self.y_label = self.legend_entries = \
                 self.vlines = self.hlines = None
 
+        if self.idx_data.shape[1] == 0:
+            return
+
         self._notifyFittingCallbacks(self.x, self.idx_data[0])
 
         if self.stacking > 0.0:
-            if self.stacking_outp is None:
+            req_shape = (self.idx_data.shape[0],
+                         min(self.idx_data.shape[1], int(self.stacking)))
+
+            if self.stacking_outp is None or \
+                    self.stacking_outp.shape != req_shape:
                 self.stacking_outp = np.zeros(
-                    (self.idx_data.shape[0],
-                     min(self.idx_data.shape[1], int(self.stacking))),
-                    dtype=self.idx_data.dtype
-                )
+                    req_shape, dtype=self.idx_data.dtype)
 
             _native.stack(self.idx_data, self.stacking_outp, self.stacking)
 
@@ -1274,6 +1278,9 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             if y_pad != 0.0:
                 self.plot_axes[2] = y_min - y_pad
                 self.plot_axes[3] = y_max + y_pad
+            elif self.idx_data.shape[1] == 1:
+                self.plot_axes[2] = 0.9*y_min
+                self.plot_axes[3] = 1.1*y_min
 
         self.repaint(axes_changed=self.autoscale_x or self.autoscale_y,
                      data_changed=True)
