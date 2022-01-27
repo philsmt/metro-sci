@@ -90,14 +90,17 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
     arguments = {
         'channel': metro.ChannelArgument(type_=metro.DatagramChannel),
-        'history_streak': -1
+        'history_streak': -1,
+        'axis_order': ('row-major', 'col-major')
     }
 
     def prepare(self, args, state):
         self.history_streak = args['history_streak']
+        self.axis_order = args['axis_order']
 
         self.plotItem = pyqtgraph.PlotItem()
         self.imageItem = DataImageItem()
+        self.imageItem.setOpts(axisOrder=self.axis_order)
 
         self.displayImage = pyqtgraph.ImageView(
             self, view=self.plotItem, imageItem=self.imageItem)
@@ -189,20 +192,39 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
     def dataSet(self, d):
         pass
 
+    @staticmethod
+    def _get_axis_idx(axis_order):
+        if axis_order == 'row-major':
+            return 1, 0
+        elif axis_order == 'col-major':
+            return 0, 1
+
     def dataAdded(self, d):
         if isinstance(d, xr.DataArray):
-            x = d.coords[d.dims[0]].data
-            self.plotItem.setLabel('bottom', d.dims[0])
-            y = d.coords[d.dims[1]].data
-            self.plotItem.setLabel('left', d.dims[1])
-            d = d.data
-        elif isinstance(d, np.ndarray):
-            x = np.arange(d.shape[0])
-            y = np.arange(d.shape[1])
-        else:
-            raise ValueError('incompatible type')
+            axis_order = d.attrs.get('axis_order', self.axis_order)
+            if axis_order not in Device.arguments['axis_order']:
+                # Make sure a valid axis order was supplied.
+                axis_order = self.axis_order
 
-        if self.history_streak > 0:
+            x_axis_idx, y_axis_idx = self._get_axis_idx(axis_order)
+
+            x = d.coords[d.dims[x_axis_idx]].data
+            self.plotItem.setLabel('bottom', d.dims[x_axis_idx])
+            y = d.coords[d.dims[y_axis_idx]].data
+            self.plotItem.setLabel('left', d.dims[y_axis_idx])
+
+            d = d.data
+
+        elif isinstance(d, np.ndarray) and d.ndim == 2:
+            axis_order = self.axis_order
+            x_axis_idx, y_axis_idx = self._get_axis_idx(axis_order)
+
+            x = np.arange(d.shape[x_axis_idx])
+            y = np.arange(d.shape[y_axis_idx])
+
+        elif self.history_streak > 0:
+            # TODO: xarray support for coordinates.
+
             d = np.squeeze(d)
 
             # Remove any additional axes
@@ -220,6 +242,14 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
             # Draw the history buffer now
             d = self.history_buffer
+            axis_order = 'col-major'
+            x_axis_idx, y_axis_idx = self._get_axis_idx(axis_order)
+
+            x = np.arange(self.history_buffer.shape[0])
+            y = np.arange(self.history_buffer.shape[1])
+
+        else:
+            raise ValueError('incompatible type')
 
         if self.pause_drawing:
             if self.redraw_once:
@@ -242,6 +272,11 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
                 self.scale_z_once = False
 
         start = time.time()
+
+        if axis_order != self.axis_order:
+            self.imageItem.setOpts(axisOrder=axis_order)
+            self.axis_order = axis_order
+
         self.imageItem.setCoordinates(x, y)
         self.displayImage.setImage(d, autoLevels=z_scale, autoRange=False)
         self.auto_z_scale = self.actionAutoScale.isChecked()
