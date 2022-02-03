@@ -587,6 +587,7 @@ class FileArgument(AbstractArgument):
         self.widget = QtWidgets.QWidget(parent)
 
         self.editPath = QtWidgets.QLineEdit(self.widget)
+        self.editPath.setText(self.root)
 
         self.buttonBrowse = QtWidgets.QPushButton(self.widget)
         self.buttonBrowse.setIcon(parent.style().standardIcon(
