@@ -235,6 +235,9 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
             self.editStorageNumber.setValue(storage['last_number'])
             self.editStorageName.setText(storage['last_name'])
 
+        # Update LogChannel storage root
+        metro.LogChannel.storage_root = self.storage_root
+
     # Build the "new device" menu by iterating over all metro.device
     # entry points.
     def _buildNewDeviceMenu(self):
