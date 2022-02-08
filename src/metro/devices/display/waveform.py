@@ -7,7 +7,7 @@
 import collections
 
 import numpy
-from datetime import datetime
+import time
 
 import metro
 from metro.devices.abstract import single_plot
@@ -23,6 +23,7 @@ class Device(single_plot.Device, metro.DisplayDevice):
         'wave_points': 40,
         'ma_points': 5,
         'ma_enabled': False,
+        'time_enabled': False,
         'bg_text': '',
     }
 
@@ -36,6 +37,7 @@ class Device(single_plot.Device, metro.DisplayDevice):
         'ma_points': 'Number of samples used for calculating the moving '
                      'average',
         'ma_enabled': 'Whether moving average is enabled by default.',
+        'time_enabled': 'Whether the time is shown on the x-axis by default.',
         'bg_text': 'Initial background text, chosen automatically if empty.'
     }
 
@@ -52,14 +54,17 @@ class Device(single_plot.Device, metro.DisplayDevice):
         if state is not None:
             self.raw_enabled = state[0]
             self.ma_enabled = state[1]
+            self.time_enabled = state[2]
         else:
             self.raw_enabled = True
             self.ma_enabled = args['ma_enabled']
+            self.time_enabled = args['time_enabled']
 
-        self.TimeMode_enabled = False
+        self.time_enabled = False
 
         self.x_data = None
-        self.x_timedata = []
+        self.time_data = []
+        self.start_time = None
         self.y_data = []
         self.ma_buffer = collections.deque(maxlen=self.ma_points)
         self.ma_data = []
@@ -108,7 +113,7 @@ class Device(single_plot.Device, metro.DisplayDevice):
         self.actionTimeMode = menu.addAction('Time Mode')
         self.actionTimeMode.triggered.connect(self.on_actionTimeMode_triggered)
         self.actionTimeMode.setCheckable(True)
-        self.actionTimeMode.setChecked(self.TimeMode_enabled)
+        self.actionTimeMode.setChecked(self.time_enabled)
 
         # We configure first to your default values in case the channel
         # subscription adds data (some implementation may do) and then
@@ -123,13 +128,10 @@ class Device(single_plot.Device, metro.DisplayDevice):
         except AttributeError:
             pass
 
-        if self.TimeMode_enabled is True:
-            self.ch_time.close()
-
         super().finalize()
 
     def serialize(self):
-        return self.raw_enabled, self.ma_enabled, self.TimeMode_enabled
+        return self.raw_enabled, self.ma_enabled, self.time_enabled
 
     def sizeHint(self):
         return metro.QtCore.QSize(525, 225)
@@ -166,22 +168,23 @@ class Device(single_plot.Device, metro.DisplayDevice):
                     self.reset_xaxis_on_add = True
                     return
 
-            if self.x_data is not None:
-                self.plot_item.setXRange(self.x_data[0], self.x_data[-1])
-                self.displayed_points = len(self.x_data)
-                return
-
         # We are only here if all of the above cases failed.
-
-        self.x_data = numpy.arange(self.wave_points)+1
-        self.plot_item.setXRange(1, self.wave_points)
-        self.displayed_points = self.wave_points
-        self.plot_item.setLabel(axis='bottom', text='', units='')
-
-        if self.TimeMode_enabled is True:
-            self.plot_item.setXRange(1, self.wave_points)
+        if self.x_data is None:
+            self.x_data = numpy.arange(self.wave_points)+1
             self.displayed_points = self.wave_points
+        else:
+            self.displayed_points = len(self.x_data)
+
+        if self.start_time is None:
+            self.start_time = time.monotonic()
+            self.time_data.clear()
+
+        if self.time_enabled:
+            self.plot_item.setXRange(self.time_data[0], self.time_data[-1])
             self.plot_item.setLabel(axis='bottom', text='time', units='s')
+        else:
+            self.plot_item.setXRange(self.x_data[0], self.x_data[-1])
+            self.plot_item.setLabel(axis='bottom', text='', units='')
 
     def _updateCurves(self):
         if self.raw_enabled and self.raw_curve is None:
@@ -212,7 +215,6 @@ class Device(single_plot.Device, metro.DisplayDevice):
     @metro.QSlot()
     def measuringPrepared(self):
         self._configure()
-        self.startTime = datetime.now()
 
     def dataSet(self, d):
         try:
@@ -224,7 +226,7 @@ class Device(single_plot.Device, metro.DisplayDevice):
             self.dataCleared()
             return
 
-        self.y_data = list(d)  # Make of copy
+        self.y_data = list(d)  # Make copy
 
         self.ma_buffer.clear()
         self.ma_data.clear()
@@ -258,59 +260,61 @@ class Device(single_plot.Device, metro.DisplayDevice):
         else:
             self.ma_data.append(sum(self.ma_buffer) / len(self.ma_buffer))
             # TODO CHECK!
+
+        self.time_data.append(time.monotonic() - self.start_time)
+
         if self.has_metropc_tags:
             self.x_data = self.channel._metropc_tags
-            self.displayed_points = len(self.x_data)
-            self.plot_item.setXRange(min(self.x_data), max(self.x_data))
+            if not self.time_enabled:
+                self.displayed_points = len(self.x_data)
+                self.plot_item.setXRange(min(self.x_data), max(self.x_data))
 
         elif len(self.y_data) > len(self.x_data):
             # This happens for continuous channels that just filled the
             # chart, so we just extend our axis to the right.
             self.x_data += 1
-            self.plot_item.setXRange(self.x_data[0], self.x_data[-1])
+            if not self.time_enabled:
+                self.plot_item.setXRange(self.x_data[0], self.x_data[-1])
 
         elif self.reset_xaxis_on_add:
             # This flag is currently only set for STEP channels that do
             # not have a fixed point list.
-            self.displayed_points = len(self.x_data)
+            if self.time_enabled:
+                self.displayed_points = len(self.time_data)
+                self.plot_item.setXRange(self.time_data[0], self.time_data[-1])
+            else:
+                self.displayed_points = len(self.x_data)
+                self.plot_item.setXRange(self.x_data[0], self.x_data[-1])
+
+        else:
             self.plot_item.setXRange(self.x_data[0], self.x_data[-1])
 
         if len(self.y_data) > 10*self.displayed_points:
             self.x_data = self.x_data[-2*self.displayed_points:]
+            self.time_data = self.time_data[-2*self.displayed_points:]
             self.y_data = self.y_data[-2*self.displayed_points:]
             self.ma_data = self.ma_data[-2*self.displayed_points:]
 
-        time = datetime.now() - self.startTime
-        self.x_timedata.append(time.total_seconds())
-
-        if not self.TimeMode_enabled:    
-            current_x = self.x_data[:min(self.displayed_points,
-                                         len(self.y_data))]
+        if self.time_enabled:
+            length = min(self.displayed_points, len(self.y_data),
+                         len(self.time_data))
+            current_x = self.time_data[-length:]
+            self.plot_item.setXRange(current_x[0], current_x[-1])
         else:
-            if self.x_timedata[-1] > self.displayed_points:
-                idx_min = min(self.displayed_points, len(self.x_timedata))
-                self.plot_item.setXRange(self.x_timedata[-idx_min],
-                                         self.x_timedata[-1])
-                current_x = self.x_timedata[-self.displayed_points:]
-            else:
-                current_x = self.x_timedata[:len(self.y_data)]
+            length = min(self.displayed_points, len(self.y_data),
+                         len(self.x_data))
+            current_x = self.x_data[:length]
 
         if self.raw_enabled:
-            self.raw_curve.setData(current_x,
-                                   self.y_data[-self.displayed_points:])
+            self.raw_curve.setData(current_x, self.y_data[-length:])
 
         if self.ma_enabled:
-            self.ma_curve.setData(current_x,
-                                  self.ma_data[-self.displayed_points:])
-
-        if self.TimeMode_enabled:
-            data = numpy.array([current_x[-1],
-                                self.y_data[-1]]).reshape((1, 2))
-            self.ch_time.addData(data)
+            self.ma_curve.setData(current_x, self.ma_data[-length:])
 
     def dataCleared(self):
         self.y_data.clear()
         self.ma_data.clear()
+        self.time_data.clear()
 
         if self.raw_enabled:
             self.raw_curve.setData(self.y_data)
@@ -342,20 +346,15 @@ class Device(single_plot.Device, metro.DisplayDevice):
         self.dataAdded(None)
 
     def on_actionTimeMode_triggered(self, action):
-        if self.TimeMode_enabled == self.actionTimeMode.isChecked():
+        if self.time_enabled == self.actionTimeMode.isChecked():
             return
 
-        self.TimeMode_enabled = self.actionTimeMode.isChecked()
+        self.time_enabled = self.actionTimeMode.isChecked()
 
-        if self.TimeMode_enabled is True:
-            self.ch_time = metro.StreamChannel(self, 'Time', freq='cont',
-                                               hint='indicator', shape=2)
+        if self.time_enabled:
+            self.plot_item.setLabel(axis='bottom', text='time', units='s')
         else:
-            try:
-                self.ch_time.close()
-            except (KeyError, AttributeError):
-                pass
+            self.plot_item.setLabel(axis='bottom', text='', units='')
 
         self._updateCurves()
-        self._configure()
         self.dataAdded(None)
