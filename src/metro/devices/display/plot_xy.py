@@ -15,13 +15,16 @@ from metro.devices.display import plot
 
 class Device(plot.Device):
     def prepare(self, args, state):
-        super().prepare(args, state)
         self.buffer = dict()
+
+        super().prepare(args, state)
 
     def dataAdded(self, d):
 
+        # d[.,0] and d[.,1] are the x and respective y value(s)
         d = d[self.index, :]
 
+        # We store them in a dictionary buffer as point pairs
         self.buffer[d[0, 0]] = d[0, 1]
         self.items = np.array(list(self.buffer.items()))
 
@@ -39,6 +42,6 @@ class Device(plot.Device):
     @staticmethod
     def isChannelSupported(channel):
         if isinstance(channel, metro.StreamChannel) and channel.shape != 2:
-            raise ValueError('plot only supports StreamChannel in 2d')
+            raise ValueError('plot_xy only supports StreamChannel in 2d')
 
         return True
