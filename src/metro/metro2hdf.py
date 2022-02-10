@@ -283,8 +283,9 @@ def convert_hdf_file(channel_file, h5ch, compress_args={}, **kwargs):
     with h5py.File(channel_file, 'r') as h5in:
         try:
             freq = h5in.attrs['freq']
-        except Exception:
-            print('WARNING: No frequeny attribute found, assuming STEP...')
+        except KeyError:
+            print('WARNING: No frequeny attribute found, skipping!')
+            return False
 
         # Frequency and hint were saved with their constant rather than
         # their string for a while, so accept both.
