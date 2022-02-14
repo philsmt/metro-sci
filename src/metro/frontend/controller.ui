@@ -566,6 +566,22 @@
       </spacer>
      </item>
      <item>
+      <widget class="QPushButton" name="buttonLog">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="text">
+        <string>Log</string>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>30</width>
+         <height>100</height>
+        </size>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="buttonProfiles">
        <property name="text">
         <string>Profiles</string>

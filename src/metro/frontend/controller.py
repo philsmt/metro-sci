@@ -10,6 +10,9 @@ from itertools import accumulate
 
 from pkg_resources import iter_entry_points
 
+import logging
+log = logging.getLogger(__name__)
+
 import metro
 from metro.services import channels, measure, profiles
 from metro.frontend import dialogs, widgets
@@ -172,6 +175,11 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
         self.menuNewChannel = QtWidgets.QMenu()
         self.menuNewChannel.triggered.connect(self.on_menuNewChannel_triggered)
         self.buttonNewChannel.setMenu(self.menuNewChannel)
+
+        # The empty string logger is the root logger to show everything
+        self.logWindow = dialogs.LogWindow(logger='')
+        self.logWindow.setWindowTitle(f'Log - {metro.WINDOW_TITLE}')
+        self.logWindow.onNewEntry(self.newLogEntry)
 
         self.menuProfiles = QtWidgets.QMenu()
         self.menuProfiles.aboutToShow.connect(self.on_menuProfiles_aboutToShow)
@@ -755,7 +763,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
 
         return self.updateStatus, self.barLimit.setValue
 
-    @QtCore.pyqtSlot()
+    @metro.QSlot()
     def quit(self):
         if self.meas is not None:
             return
@@ -782,11 +790,11 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
         self.leakTimer.timeout.connect(self._leak_check)
         self.leakTimer.start()
 
-    @QtCore.pyqtSlot()
+    @metro.QSlot()
     def _leak_check(self):
         metro.checkForDeviceLeaks()
 
-    @QtCore.pyqtSlot(int)
+    @metro.QSlot(int)
     def updateStatus(self, code):
         if code == measure.StatusOperator.STANDBY:
             self._setStatusDisplay('Standby', 'Grey')
@@ -909,7 +917,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
         started.connect(self.measurementStarted)
         stopped.connect(self.measurementStopped)
 
-    @QtCore.pyqtSlot()
+    @metro.QSlot()
     def measurementStarted(self):
         now = time.monotonic()
 
@@ -931,21 +939,21 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
 
         self.last_step_begin = now
 
-    @QtCore.pyqtSlot()
+    @metro.QSlot()
     def measurementTicked(self):
         elapsed = int(round(time.monotonic() - self.measuring_start, 0))
 
         self.displayElapsedTime.setText(formatTime(elapsed))
 
-    @QtCore.pyqtSlot()
+    @metro.QSlot()
     def measurementStopped(self):
         self.remaining_steps -= 1
 
-    @QtCore.pyqtSlot()
+    @metro.QSlot()
     def configMeasurementAccepted(self):
         pass
 
-    @QtCore.pyqtSlot()
+    @metro.QSlot()
     def configStorageAccepted(self):
         csd = self.dialogConfigStorage
 
@@ -970,7 +978,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
 
         self._updateStorageProfile()
 
-    @QtCore.pyqtSlot()
+    @metro.QSlot()
     def on_shortcutScreenshot_activated(self):
         root = self.storage_root if os.path.isdir(self.storage_root) else '.'
 
@@ -978,7 +986,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
             root, time.strftime('%H%M%S_%d%m%Y')
         ))
 
-    @QtCore.pyqtSlot()
+    @metro.QSlot()
     def on_buttonRun_pressed(self):
         if self.meas is not None:
             # A measurement is running and was only paused!
@@ -1056,18 +1064,18 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
 
         self.meas.run()
 
-    @QtCore.pyqtSlot()
+    @metro.QSlot()
     def on_buttonStep_pressed(self):
         self.meas.skipLimit()
 
-    @QtCore.pyqtSlot()
+    @metro.QSlot()
     def on_buttonPause_pressed(self):
         # Apparently this gets called before the state is changed, so we
         # have to invert it ourselves. Still we want to use this signal
         # because it is always the result of manual interaction.
         self.meas.setPauseFlag(not self.buttonPause.isChecked())
 
-    @QtCore.pyqtSlot()
+    @metro.QSlot()
     def on_buttonStop_pressed(self):
         if self.meas is None:
             return
@@ -1081,7 +1089,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
         self.buttonPause.setEnabled(False)
         self.buttonStop.setEnabled(False)
 
-    @QtCore.pyqtSlot(bool)
+    @metro.QSlot(bool)
     def on_checkTimeLimit_toggled(self, flag):
         if flag:
             self.prev_limit = self.dialogMeas.limit_item.serialize()
@@ -1096,14 +1104,14 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
 
         self._updateTimeEstimate()
 
-    @QtCore.pyqtSlot(int)
+    @metro.QSlot(int)
     def on_editTimeLimitMin_valueChanged(self, value):
         self._updateTimeEstimate()
 
         if self.checkTimeLimit.isChecked():
             self._updateTimeLimit()
 
-    @QtCore.pyqtSlot(int)
+    @metro.QSlot(int)
     def on_editTimeLimitSec_valueChanged(self, value):
         if value >= 60:
             excess_minutes = value // 60
@@ -1120,7 +1128,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
         if self.checkTimeLimit.isChecked():
             self._updateTimeLimit()
 
-    @QtCore.pyqtSlot(bool)
+    @metro.QSlot(bool)
     def on_checkLinearScan_toggled(self, flag):
         if flag:
             self.prev_scancount = self.dialogMeas.editScanAmount.value()
@@ -1136,40 +1144,40 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
 
         self._updateTimeEstimate()
 
-    @QtCore.pyqtSlot(int)
+    @metro.QSlot(int)
     def on_editLinearScanCount_valueChanged(self, value):
         if self.checkLinearScan.isChecked():
             self._updateLinearScan()
 
         self._updateTimeEstimate()
 
-    @QtCore.pyqtSlot(str)
+    @metro.QSlot(str)
     def on_selectLinearScanOperator_currentTextChanged(self, text):
         if self.checkLinearScan.isChecked():
             self._updateLinearScan()
 
-    @QtCore.pyqtSlot(str)
+    @metro.QSlot(str)
     def on_editLinearScanStart_textChanged(self, text):
         if self.checkLinearScan.isChecked():
             self._updateLinearScan()
 
         self._updateTimeEstimate()
 
-    @QtCore.pyqtSlot(str)
+    @metro.QSlot(str)
     def on_editLinearScanEnd_textChanged(self, text):
         if self.checkLinearScan.isChecked():
             self._updateLinearScan()
 
         self._updateTimeEstimate()
 
-    @QtCore.pyqtSlot(str)
+    @metro.QSlot(str)
     def on_editLinearScanStep_textChanged(self, text):
         if self.checkLinearScan.isChecked():
             self._updateLinearScan()
 
         self._updateTimeEstimate()
 
-    @QtCore.pyqtSlot(bool)
+    @metro.QSlot(bool)
     def on_checkOperatorMacro_toggled(self, flag):
         if flag:
             self.prev_unnamed_macro = self.dialogMeas.saveMacro()
@@ -1188,16 +1196,16 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
             if self.prev_unnamed_macro is not None:
                 self.dialogMeas.loadMacro(self.prev_unnamed_macro)
 
-    @QtCore.pyqtSlot(str)
+    @metro.QSlot(str)
     def on_selectOperatorMacro_currentTextChanged(self, text):
         if self.checkOperatorMacro.isChecked():
             self.dialogMeas.loadMacro(text)
 
-    @QtCore.pyqtSlot(str)
+    @metro.QSlot(str)
     def on_labelMoreMeasOptions_linkActivated(self, text):
         self.dialogMeas.show()
 
-    @QtCore.pyqtSlot(str)
+    @metro.QSlot(str)
     def on_labelStorageBrowse_linkActivated(self, text):
         if self.dialogBrowseStorage is None:
             self.dialogBrowseStorage = dialogs.BrowseStorageDialog()
@@ -1210,7 +1218,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
         else:
             self.dialogBrowseStorage.show()
 
-    @QtCore.pyqtSlot(str)
+    @metro.QSlot(str)
     def on_labelStorageConfig_linkActivated(self, text):
         if self.dialogConfigStorage is None:
             self.dialogConfigStorage = dialogs.ConfigStorageDialog()
@@ -1279,7 +1287,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
         else:
             metro.app.createNewDevice(name)
 
-    @QtCore.pyqtSlot(bool)
+    @metro.QSlot(bool)
     def on_actionShowDisplayDevices_toggled(self, flag):
         for idx in range(self.layoutDisplayDevices.count()):
             self.layoutDisplayDevices.itemAt(idx).widget().setVisible(flag)
@@ -1296,6 +1304,19 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
             metro.app.editScriptedChannel(None)
         elif name == '__remote__':
             pass
+
+    @metro.QSlot()
+    def newLogEntry(self):
+        # Colorize the button on new log entry if log is not currently shown
+        if self.logWindow.isHidden():
+            color = '#393939'
+            self.buttonLog.setStyleSheet('color: {0};'.format(color))
+
+    @metro.QSlot()
+    def on_buttonLog_pressed(self):
+        # Reverse to normal button design (not colored) when clicked
+        self.buttonLog.setStyleSheet('')
+        self.logWindow.show()
 
     @metro.QSlot()
     def on_menuProfiles_aboutToShow(self):
@@ -1345,7 +1366,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
         else:
             metro.app.loadProfile(action.data())
 
-    @QtCore.pyqtSlot(str)
+    @metro.QSlot(str)
     def on_deviceLink_activated(self, device_name):
         device = metro.getDevice(device_name)
 
@@ -1354,7 +1375,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
         else:
             device.hide()
 
-    @QtCore.pyqtSlot(str, QtCore.QPoint)
+    @metro.QSlot(str, QtCore.QPoint)
     def on_deviceLink_contextRequested(self, device_name, menu_pos):
         device = metro.getDevice(device_name)
 
