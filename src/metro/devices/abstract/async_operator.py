@@ -13,6 +13,9 @@
 
 import metro
 
+from metro.services import logger
+log = logger.log(__name__)
+
 
 class Operator(metro.QObject):
     _ready = metro.QSignal(object)
@@ -41,11 +44,11 @@ class Operator(metro.QObject):
             self.showError('Unchecked exception in Operator.finalize, please '
                            'see details.', e)
 
-    def showError(self, text, details=None):
-        self._error.emit((text, details))
+    def showError(self, text, details=None, log=log):
+        self._error.emit((text, details, log))
 
-    def showException(self, e):
-        self._error.emit(e)
+    def showException(self, e, log=log):
+        self._error.emit((e, log))
 
     def prepare(self, args):
         pass
@@ -87,8 +90,8 @@ class BaseDevice(object):
 
     @metro.QSlot(object)
     def _on_error(self, err):
-        if isinstance(err, Exception):
-            self.showException(err)
+        if isinstance(err[0], Exception):
+            self.showException(*err)
         else:
             self.showError(*err)
 

@@ -11,11 +11,35 @@ import metro
 QtCore = metro.QtCore
 QtWidgets = metro.QtWidgets
 
+# Configure level from which to show logged events: DEBUG, INFO, WARN, ERROR
+level = logging.INFO
+
+
+# The base handler is the basic handler for most loggers, which can be shown
+# in the Metro main window. There should be only this one base handler, but
+# other 'local' handlers can exist.
+base_handler = None
+# List of all non-local loggers created so far
+loggers = []
+
+
+def log(name, local=False):
+    log = logging.getLogger(name)
+    if local:
+        return log
+
+    global base_handler, loggers
+    loggers.append(name)
+    if base_handler is not None:
+        base_handler.addLogger(name)
+    return log
+
+
 class QTextEditLogger(logging.Handler, QtCore.QObject):
     newEntry = metro.QSignal()
     appendEntry = metro.QSignal(str)
 
-    def __init__(self, parent, logger=None,
+    def __init__(self, parent, logger=None, base=False,
                  format_str='%(asctime)s - %(name)s- '
                             '%(levelname)s - %(message)s'):
         super().__init__()
@@ -30,6 +54,11 @@ class QTextEditLogger(logging.Handler, QtCore.QObject):
         if logger is not None:
             self.addLogger(logger)
 
+        if base:
+            global base_handler, loggers
+            base_handler = self
+            self.addLogger(loggers)
+
     def emit(self, record):
         entry = self.format(record)
         self.appendEntry.emit(entry)
@@ -42,11 +71,12 @@ class QTextEditLogger(logging.Handler, QtCore.QObject):
         else:
             logging.getLogger(logger).addHandler(self)
 
+
 class LogWindow(QtWidgets.QWidget):
-    def __init__(self, parent=None, logger=None):
+    def __init__(self, parent=None, logger=None, base=False):
         super().__init__(parent)
 
-        self.logTextBox = QTextEditLogger(self, logger)
+        self.logTextBox = QTextEditLogger(self, logger, base)
 
         self.buttonClear = QtWidgets.QPushButton(self)
         self.buttonClear.setText('Clear log')
@@ -69,3 +99,8 @@ class LogWindow(QtWidgets.QWidget):
 
     def onNewEntry(self, slot):
         self.logTextBox.newEntry.connect(slot)
+
+
+# Set the basic level of the root logger so all created loggers from now on
+# inherit this level
+logging.getLogger().setLevel(level)

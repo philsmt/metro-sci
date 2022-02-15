@@ -10,12 +10,12 @@ from itertools import accumulate
 
 from pkg_resources import iter_entry_points
 
-import logging
-log = logging.getLogger(__name__)
-
 import metro
 from metro.services import channels, measure, profiles
 from metro.frontend import dialogs, widgets
+
+from metro.services import logger
+log = logger.log(__name__)
 
 QtCore = metro.QtCore
 QtGui = metro.QtGui
@@ -176,10 +176,11 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
         self.menuNewChannel.triggered.connect(self.on_menuNewChannel_triggered)
         self.buttonNewChannel.setMenu(self.menuNewChannel)
 
-        # The empty string logger is the root logger to show everything
-        self.logWindow = dialogs.LogWindow(logger='')
+        # Create the logWindow along with the log handler as the base handler
+        self.logWindow = logger.LogWindow(base=True)
         self.logWindow.setWindowTitle(f'Log - {metro.WINDOW_TITLE}')
         self.logWindow.onNewEntry(self.newLogEntry)
+        self.logWindow.addLogger(__name__)
 
         self.menuProfiles = QtWidgets.QMenu()
         self.menuProfiles.aboutToShow.connect(self.on_menuProfiles_aboutToShow)
@@ -245,6 +246,8 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
 
         # Update LogChannel storage root
         metro.LogChannel.storage_root = self.storage_root
+
+        log.info("Main window constructed")
 
     # Build the "new device" menu by iterating over all metro.device
     # entry points.
@@ -1309,7 +1312,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
     def newLogEntry(self):
         # Colorize the button on new log entry if log is not currently shown
         if self.logWindow.isHidden():
-            color = '#393939'
+            color = '#505050'
             self.buttonLog.setStyleSheet('color: {0};'.format(color))
 
     @metro.QSlot()
