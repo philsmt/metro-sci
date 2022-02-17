@@ -30,16 +30,15 @@ QtWidgets = metro.QtWidgets
 
 
 def _on_exception(*args):
-    with open(metro.LOCAL_PATH + '/exceptions.log', 'a') as logfile:
-        logfile.write('----------------------------'
+    with open(os.path.join(metro.LOCAL_PATH, 'exceptions.log'), 'a') as logf:
+        logf.write('----------------------------'
                       '----------------------------\n')
-        logfile.write('- Unchecked exception caught on {0} -\n'.format(
-            time.strftime('%Y/%m/%d at %H:%M:%S'))
-        )
-        logfile.write('----------------------------'
+        logf.write('- Unchecked exception caught on {0} -\n'.format(
+            time.strftime('%Y/%m/%d at %H:%M:%S')))
+        logf.write('----------------------------'
                       '----------------------------\n')
-        traceback.print_exception(*args, file=logfile)
-        logfile.write('\n')
+        traceback.print_exception(*args, file=logf)
+        logf.write('\n')
 
     traceback.print_exception(*args)
 
@@ -398,7 +397,7 @@ class AbstractApplication(object):
 
     def loadProfile(self, path):
         actual_path = path if os.path.isfile(path) \
-            else '{0}/{1}.json'.format(metro.PROFILE_PATH, path)
+            else os.path.join(metro.PROFILE_PATH, '{0}.json'.format(path))
 
         profile = profiles.load(actual_path)
 
@@ -493,6 +492,9 @@ class AbstractApplication(object):
 
             dev_grp.restoreGeometry_(state['geometry'])
             self.addDeviceGroup(dev_grp)
+
+        profile_name = os.path.splitext(os.path.basename(actual_path))[0]
+        log.info('Profile "{0}" loaded'.format(profile_name))
 
         return profile, use_geometry
 
@@ -590,6 +592,9 @@ class AbstractApplication(object):
             profile['channels'][channel_name].update(custom)
 
         profiles.save(path, profile)
+
+        profile_name = os.path.splitext(os.path.basename(path))[0]
+        log.info('Profile "{0}" saved'.format(profile_name))
 
         return profile
 

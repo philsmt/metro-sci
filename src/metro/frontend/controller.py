@@ -176,11 +176,10 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
         self.menuNewChannel.triggered.connect(self.on_menuNewChannel_triggered)
         self.buttonNewChannel.setMenu(self.menuNewChannel)
 
-        # Create the logWindow along with the log handler as the base handler
+        # Create the log window along with the log handler as the base handler
         self.logWindow = logger.LogWindow(base=True)
         self.logWindow.setWindowTitle(f'Log - {metro.WINDOW_TITLE}')
         self.logWindow.onNewEntry(self.newLogEntry)
-        self.logWindow.addLogger(__name__)
 
         self.menuProfiles = QtWidgets.QMenu()
         self.menuProfiles.aboutToShow.connect(self.on_menuProfiles_aboutToShow)
@@ -223,7 +222,7 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
 
         try:
             storage = profiles.load(
-                f'{metro.LOCAL_PATH}/standard_storage.json')
+                os.path.join(metro.LOCAL_PATH, 'standard_storage.json'))
         except FileNotFoundError:
             pass
         except ValueError:
@@ -447,7 +446,8 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
         self.displayRemainingTime.setText('?')
 
     def _updateStorageProfile(self):
-        profiles.save(f'{metro.LOCAL_PATH}/standard_storage.json', {
+        profiles.save(
+            os.path.join(metro.LOCAL_PATH, 'standard_storage.json'), {
             'root': self.storage_root,
             'numbering': self.storage_numbering,
             'increase': self.storage_increase,
@@ -1312,12 +1312,13 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
     def newLogEntry(self):
         # Colorize the button on new log entry if log is not currently shown
         if self.logWindow.isHidden():
-            color = '#505050'
-            self.buttonLog.setStyleSheet('color: {0};'.format(color))
+            color = '#000000' # '#505050' darkgray
+            css_str = 'color: {0}; font-weight: bold;'
+            self.buttonLog.setStyleSheet(css_str.format(color))
 
     @metro.QSlot()
     def on_buttonLog_pressed(self):
-        # Reverse to normal button design (not colored) when clicked
+        # Reverse to normal button design when clicked
         self.buttonLog.setStyleSheet('')
         self.logWindow.show()
 

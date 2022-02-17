@@ -134,6 +134,8 @@ def create(entry_point, name, parent=None, args=None, state=None):
     if parent is not None:
         parent._child_count += 1
 
+    log.info('Device "{0}" created'.format(name))
+
     return dev
 
 
@@ -493,6 +495,8 @@ class GenericDevice(metro.measure.Node):
             pass
         else:
             _morgue.append(name)
+
+        log.info('Device "{0}" killed'.format(self.getDeviceName()))
 
     def getDeviceName(self):
         """
