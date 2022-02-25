@@ -50,7 +50,7 @@ def log(name, local=False):
 
 
 class QTextEditLogger(logging.Handler, QtCore.QObject):
-    newEntry = metro.QSignal()
+    newEntry = metro.QSignal(int)
     appendEntry = metro.QSignal(str)
 
     def __init__(self, parent, logger=None, base=False,
@@ -83,7 +83,7 @@ class QTextEditLogger(logging.Handler, QtCore.QObject):
     def emit(self, record):
         entry = self.format(record)
         self.appendEntry.emit(entry)
-        self.newEntry.emit()
+        self.newEntry.emit(record.levelno)
         # scrollbar = self.widget.verticalScrollBar()
         # scrollbar.setValue(scrollbar.maximum())
 

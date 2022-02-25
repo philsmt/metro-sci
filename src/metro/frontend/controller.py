@@ -783,6 +783,8 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
 
         metro.killAllDevices()
 
+        log.info("Quitting Metro.")
+
         metro.app.processEvents()
         metro.app.quit()
 
@@ -1308,8 +1310,8 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
         elif name == '__remote__':
             pass
 
-    @metro.QSlot()
-    def newLogEntry(self):
+    @metro.QSlot(int)
+    def newLogEntry(self, levelno):
         # Colorize the button on new log entry if log is not currently shown
         if self.logWindow.isHidden():
             color = '#000000' # '#505050' darkgray
@@ -1317,10 +1319,14 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
             self.buttonLog.setStyleSheet(css_str.format(color))
 
     @metro.QSlot()
-    def on_buttonLog_pressed(self):
-        # Reverse to normal button design when clicked
-        self.buttonLog.setStyleSheet('')
-        self.logWindow.show()
+    def on_buttonLog_clicked(self):
+        if self.logWindow.isHidden():
+            self.logWindow.show()
+
+            # Reverse to normal button design when clicked
+            self.buttonLog.setStyleSheet('')
+        else:
+            self.logWindow.close()
 
     @metro.QSlot()
     def on_menuProfiles_aboutToShow(self):

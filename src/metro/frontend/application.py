@@ -93,8 +93,9 @@ class AbstractApplication(object):
         elif version is None:
             try:
                 version_hash = subprocess.check_output(
-                    ['git', 'rev-parse', 'HEAD'], stderr=subprocess.STDOUT
-                )
+                    ['git', 'rev-parse', 'HEAD'],
+                    stderr=subprocess.STDOUT, cwd=metro.SRC_ROOT
+                    )
             except FileNotFoundError:
                 version = None
                 version_short = None
@@ -108,8 +109,8 @@ class AbstractApplication(object):
                 else:
                     short_hash = subprocess.check_output(
                         ['git', 'rev-parse', '--short', 'HEAD'],
-                        stderr=subprocess.STDOUT
-                    )
+                        stderr=subprocess.STDOUT, cwd=metro.SRC_ROOT
+                        )
 
                     version = version_hash.decode('ascii').strip()
                     version_short = short_hash.decode('ascii').strip()
