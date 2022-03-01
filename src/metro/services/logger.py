@@ -1,4 +1,7 @@
 
+# Copyright 2022 Lutz Marder <lutz.marder@gmail.com>.
+# All Rights Reserved.
+#
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -55,7 +58,7 @@ class QTextEditLogger(logging.Handler, QtCore.QObject):
 
     def __init__(self, parent, logger=None, base=False,
                  format_str=None, html=False):
-        super().__init__()
+        super(QTextEditLogger, self).__init__()
         QtCore.QObject.__init__(self)
 
         self.widget = QtWidgets.QPlainTextEdit(parent)

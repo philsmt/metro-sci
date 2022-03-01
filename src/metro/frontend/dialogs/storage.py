@@ -434,14 +434,14 @@ class BrowseStorageDialog(QtWidgets.QDialog):
                     number = parts[0]
                     name_idx = 1
 
-                time = parts[-2]
-                date = parts[-1]
+                time = parts[-1]
+                date = parts[-2]
 
                 # number, name, time, date, channel_count
                 new_files.append([
                     number, '_'.join(parts[name_idx:-2]),
-                    '{0}:{1}:{2}'.format(time[:2], time[2:4], time[4:]),
                     '{0}.{1}.{2}'.format(date[:2], date[2:4], date[4:]),
+                    '{0}:{1}:{2}'.format(time[:2], time[2:4], time[4:]),
                     0, filename]
                 )
 
