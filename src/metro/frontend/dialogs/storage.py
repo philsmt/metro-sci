@@ -520,7 +520,7 @@ class BrowseStorageDialog(QtWidgets.QDialog):
                 if index.column() == 4:
                     details = self.files[index.row()]
 
-                    channel_idx = len(details[5])+1
+                    channel_idx = len(details[5]) + 1
                     channel_names = [s[channel_idx:-4] for s in details[6:]]
 
                     return '\n'.join(sorted(channel_names))
@@ -532,7 +532,7 @@ class BrowseStorageDialog(QtWidgets.QDialog):
 
             new_root = '{0}{1}_{2}_{3}'.format(
                 details[0] + '_' if details[0] else '', details[1],
-                details[2].replace(':', ''), details[3].replace('.', '')
+                details[2].replace('.', ''), details[3].replace(':', '')
             )
 
             if details[5] == new_root:
