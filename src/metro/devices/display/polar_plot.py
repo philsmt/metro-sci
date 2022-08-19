@@ -6,13 +6,18 @@
 
 from PyQt5 import QtWidgets
 
-import numpy
+import numpy as np
+import xarray as xr
 
 from matplotlib import rc as mpl_rc
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 
 import metro
+
+from .fast_plot import COLOR_STYLES
+LINE_COLORS = [tuple((y/255 for y in x[0])) for x in COLOR_STYLES['default']]
+MARKER_COLORS = [tuple((y/255 for y in x[1])) for x in COLOR_STYLES['default']]
 
 
 class Device(metro.WidgetDevice, metro.DisplayDevice):
@@ -87,6 +92,9 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
         self.x = None
         self.last_y_len = 0
 
+        self.legend = None
+        self.legend_entries = None
+
         self.channel.subscribe(self)
 
         self.axes.set_theta_direction(self.theta_direction)
@@ -100,7 +108,20 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
         pass
 
     def dataAdded(self, d):
-        if len(d) != self.last_y_len or self.x is None:
+        if isinstance(d, xr.DataArray):
+            self.x = d.coords[d.dims[-1]].data * (np.pi/180)
+
+            if d.data.ndim > 1:
+                legend_entries = d.coords[d.dims[0]].data
+                legend_dirty = False
+
+                if (legend_entries != self.legend_entries).any():
+                    self.legend_entries = legend_entries
+                    legend_dirty = True
+
+            d = d.data
+
+        elif len(d) != self.last_y_len or self.x is None:
             d_len = len(d)
 
             x_start = self.theta_start
@@ -114,23 +135,42 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
             elif self.flow == 'extend':
                 x_len += 1
 
-            self.x = numpy.linspace(x_start * 3.1415, x_end * 3.1415, x_len)
+            self.x = np.linspace(x_start * 3.1415, x_end * 3.1415, x_len)
             self.last_y_len = d_len
 
-        d_max = d.max()
-
-        if d_max == 0.0:
-            return
-
-        if self.flow == 'extend':
-            d = numpy.append(d, d[0])
+            if self.flow == 'extend':
+                d = np.append(d, d[0])
 
         if self.normalize:
             self.axes.set_ylim([0, 1.1])
-            d = d / d_max
+            d = d / d.max()
+
+            if not np.isfinite(d).all():
+                d[:] = 0.0
 
         self.axes.cla()
-        self.axes.plot(self.x, d, 'r.-', markersize=10)
+        plot_kwargs = dict(linewidth=1, ms=10)
+
+        if d.ndim == 1:
+            self.axes.plot(self.x, d, '.-',
+                           c=LINE_COLORS[0],
+                           mfc=MARKER_COLORS[0], mec=MARKER_COLORS[0],
+                           **plot_kwargs)
+        else:
+            for i, row in enumerate(d):
+                self.axes.plot(self.x, row, '.-',
+                               c=LINE_COLORS[i],
+                               mfc=MARKER_COLORS[i], mec=MARKER_COLORS[i],
+                               label=legend_entries[i], **plot_kwargs)
+
+            if legend_dirty:
+                if self.legend is not None:
+                    self.legend.remove()
+
+                self.legend = self.figure.legend(
+                    loc='upper left', facecolor='none',
+                    labelcolor='white', edgecolor='white')
+
         self.axes.set_theta_direction(self.theta_direction)
         self.axes.set_theta_offset(self.theta_offset)
 
