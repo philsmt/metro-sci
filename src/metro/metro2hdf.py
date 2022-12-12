@@ -47,9 +47,12 @@ def _bitmask(start, end):
     return ((1 << (start - end)) - 1) << end
 
 
-def parse_run_root(filename):
-    root = os.path.basename(filename)
+def parse_run_root(file):
+    path = os.path.splitext(file)[0]
+    filename = os.path.basename(file)
+    root = os.path.splitext(filename)[0]
     parts = root.split('_')
+    print("[+] Parsing run   {0}".format(root), flush=True)
 
     try:
         int(parts[0])
@@ -60,14 +63,18 @@ def parse_run_root(filename):
         number = parts[0]
         name_idx = 1
 
-    time = parts[-1]
-    date = parts[-2]
+    try:
+        time = parts[-1]
+        date = parts[-2]
+    except IndexError as e:
+        print("    Invalid screenshot file {0}!".format(filename), flush=True)
+        raise(e)
 
     return MetroRun(
         number=number,
         name='_'.join(parts[name_idx:-2]),
         root=root,
-        path=filename,
+        path=path,
         time='{0}:{1}:{2}'.format(time[:2], time[2:4], time[4:]),
         date='{0}.{1}.{2}'.format(date[:2], date[2:4], date[4:]),
         channels=[]
@@ -81,7 +88,7 @@ def remove_extra_marker(data_str):
         data_str = (data_str[:marker_start] +
                     data_str[marker_end+1:])
 
-        print('removed extra marker...', end='', flush=True)
+        print('removed extra marker... ', end='', flush=True)
 
     return data_str
 
@@ -737,7 +744,7 @@ def convert_legacy_hptdc_file(channel_file, h5ch, compress_args={}, **kwargs):
 
 
 def convert_file(channel_name, channel_file, h5f, compress_args={}, **kwargs):
-    print('* {0}...'.format(channel_name), end='', flush=True)
+    print(' * {0}: '.format(channel_name), end='', flush=True)
 
     convert_func = None
     ext = channel_file[channel_file.rfind('.'):]
@@ -780,7 +787,7 @@ def run(glob_str='*', output_dir=None, output_format='{root}', driver=None,
         if entry[-4:] != '.jpg' and entry[-4:] != '.png':
             continue
 
-        runs.append(parse_run_root(entry[:-4]))
+        runs.append(parse_run_root(entry))
 
     # Now add the channels
     for entry in glob_list:
@@ -789,7 +796,7 @@ def run(glob_str='*', output_dir=None, output_format='{root}', driver=None,
 
         for run in runs:
             if (entry.startswith(run.path) and
-                    entry[:entry.rfind('.')] != run.path):
+                entry[:entry.rfind('.')] != run.path):
                 run.channels.append(entry)
 
     # Filter out runs without any channels
