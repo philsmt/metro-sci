@@ -304,6 +304,11 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
         self.menuContext.addSeparator()
 
+        self.actionTitleColor = self.menuContext.addAction(
+            'Set plot title color...')
+
+        self.menuContext.addSeparator()
+
         self.actionShowMarker = self.menuContext.addAction(
             'Show point markers')
         self.actionShowMarker.setCheckable(True)
@@ -1104,6 +1109,17 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             self.stacking_outp = None
 
             self.dataAdded(self.ch_data)
+
+        elif action == self.actionTitleColor:
+            new_color = QtWidgets.QColorDialog.getColor(
+                self.title_color, None, self.windowTitle(),
+                QtWidgets.QColorDialog.ShowAlphaChannel)
+
+            if new_color is None:
+                return
+
+            self.title_color = new_color
+            self.repaint(title_changed=True)
 
         elif action == self.actionShowMarker:
             self.show_marker = self.actionShowMarker.isChecked()
