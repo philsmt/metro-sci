@@ -203,7 +203,6 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         if isinstance(d, xr.DataArray):
             axis_order = d.attrs.get('axis_order', self.axis_order)
             if axis_order not in Device.arguments['axis_order']:
-                # Make sure a valid axis order was supplied.
                 axis_order = self.axis_order
 
             x_axis_idx, y_axis_idx = self._get_axis_idx(axis_order)
@@ -223,8 +222,6 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             y = np.arange(d.shape[y_axis_idx])
 
         elif self.history_streak > 0:
-            # TODO: xarray support for coordinates.
-
             d = np.squeeze(d)
 
             # Remove any additional axes
