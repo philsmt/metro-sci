@@ -12,7 +12,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
 
     arguments = {
         'channel': metro.ChannelArgument(),
-        'func': ('str', 'repr', 'pprint')
+        'func': ('str', 'repr', 'pprint', 'ndshape')
     }
 
     descriptions = {
@@ -46,6 +46,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
 
             pretty_printer = pprint.PrettyPrinter(indent=4)
             self.display_func = pretty_printer.pformat
+        elif args['func'] == 'ndshape':
+            self.display_func = lambda x: str(x.shape)
 
         self.channel = args['channel']
         self.channel.subscribe(self)

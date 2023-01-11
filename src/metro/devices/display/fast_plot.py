@@ -172,6 +172,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.stacking = state.pop('stacking', 0.0)
         self.show_marker = state.pop('show_marker', args['show_marker'])
         self.show_legend = state.pop('show_legend', True)
+        self.show_annotations = state.pop('show_annotations', True)
         self.downsampling = state.pop('downsampling', args['downsampling'])
 
         if lttbc is None:
@@ -303,6 +304,11 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
         self.menuContext.addSeparator()
 
+        self.actionTitleColor = self.menuContext.addAction(
+            'Set plot title color...')
+
+        self.menuContext.addSeparator()
+
         self.actionShowMarker = self.menuContext.addAction(
             'Show point markers')
         self.actionShowMarker.setCheckable(True)
@@ -312,6 +318,11 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             'Show scan legend')
         self.actionShowLegend.setCheckable(True)
         self.actionShowLegend.setChecked(self.show_legend)
+
+        self.actionShowAnnotations = self.menuContext.addAction(
+            'Show annotations')
+        self.actionShowAnnotations.setCheckable(True)
+        self.actionShowAnnotations.setChecked(self.show_annotations)
 
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.on_menuContext_requested)
@@ -384,6 +395,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             'stacking': self.stacking,
             'show_marker': self.show_marker,
             'show_legend': self.show_legend,
+            'show_annotations': self.show_annotations,
             'downsampling': self.downsampling
         }
 
@@ -528,7 +540,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         p.setPen(self.lines_color)
 
         # Vertical annotation lines.
-        if self.vlines is not None:
+        if self.vlines is not None and self.show_annotations:
             div = self.plot_transform[0]
             y_end = -self.plot_geometry[3]
 
@@ -557,7 +569,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             p.restore()
 
         # Horizontal annotation lines.
-        if self.hlines is not None:
+        if self.hlines is not None and self.show_annotations:
             div = self.plot_transform[1]
             x_end = self.plot_geometry[2]
 
@@ -1098,6 +1110,17 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
             self.dataAdded(self.ch_data)
 
+        elif action == self.actionTitleColor:
+            new_color = QtWidgets.QColorDialog.getColor(
+                self.title_color, None, self.windowTitle(),
+                QtWidgets.QColorDialog.ShowAlphaChannel)
+
+            if new_color is None:
+                return
+
+            self.title_color = new_color
+            self.repaint(title_changed=True)
+
         elif action == self.actionShowMarker:
             self.show_marker = self.actionShowMarker.isChecked()
             self.repaint(data_changed=True)
@@ -1105,6 +1128,10 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         elif action == self.actionShowLegend:
             self.show_legend = self.actionShowLegend.isChecked()
             super().repaint()  # Trigger direct repaint as nothing is cached.
+
+        elif action == self.actionShowAnnotations:
+            self.show_annotations = self.actionShowAnnotations.isChecked()
+            super().repaint()
 
     # @metro.QSlot(QtCore.QAction)
     def on_menuDownsampling_triggered(self, action):

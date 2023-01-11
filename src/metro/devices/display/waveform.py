@@ -7,6 +7,7 @@
 import collections
 
 import numpy
+import xarray as xr
 
 import metro
 from metro.devices.abstract import single_plot
@@ -55,6 +56,7 @@ class Device(single_plot.Device, metro.DisplayDevice):
             self.raw_enabled = True
             self.ma_enabled = args['ma_enabled']
 
+        self.y_label = ''
         self.x_data = None
         self.y_data = []
         self.ma_buffer = collections.deque(maxlen=self.ma_points)
@@ -220,6 +222,13 @@ class Device(single_plot.Device, metro.DisplayDevice):
     def dataAdded(self, d):
         if d is None:
             return
+        elif isinstance(d, xr.DataArray):
+            y_label = d.attrs.get('ylabel', None) or ''
+            if y_label != self.y_label:
+                self.plot_item.setLabel('left', y_label)
+                self.y_label = y_label
+
+            d = float(d.data)
 
         try:
             d = d[self.index]
