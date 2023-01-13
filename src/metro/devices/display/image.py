@@ -143,6 +143,16 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.history_streak = args['history_streak']
         self.axis_order = args['axis_order']
 
+        if state is None:
+            state = {}
+        elif not isinstance(state, dict):
+            # Compatibility with tuple serialization.
+            state = {
+                'roi_state': state[0],
+                'auto_scale': state[1],
+                'gradient_scale': state[2],
+            }
+
         self.viewBox = DataViewBox()
         self.plotItem = pyqtgraph.PlotItem(viewBox=self.viewBox)
         self.imageItem = DataImageItem()
@@ -151,6 +161,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.displayImage = pyqtgraph.ImageView(
             self, view=self.plotItem, imageItem=self.imageItem)
         self.displayImage._opt_2d_parallel_profiles = True
+        self.displayImage.ui.histogram.gradient.restoreState(
+            state.get('gradient_state', default_gradient))
 
         # Must be set after creating the other pyqtgraph objects.
         self.viewBox.setAspectLocked(False)
@@ -206,7 +218,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
         self.actionAutoScale = menu.addAction('Always rescale Z axis')
         self.actionAutoScale.setCheckable(True)
-        self.actionAutoScale.setChecked(False)
+        self.actionAutoScale.setChecked(state.get('auto_scale', False))
         self.actionAutoScale.toggled.connect(
             self.on_actionAutoScale_toggled
         )
@@ -237,9 +249,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
         self.fit_curves = {}
 
-        if state is not None:
-            roi_state = state[0]
-
+        roi_state = state.get('roi_state', None)
+        if roi_state is not None:
             self.displayImage.roi.setPos(*roi_state[0])
             self.displayImage.roi.setSize(roi_state[1])
             self.displayImage.roi.setAngle(roi_state[2])
@@ -247,11 +258,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             if roi_state[3]:
                 self.displayImage.ui.roiBtn.click()
 
-            self.actionAutoScale.setChecked(state[1])
-            self.displayImage.ui.histogram.gradient.restoreState(state[2])
-        else:
-            self.displayImage.ui.histogram.gradient.restoreState(
-                default_gradient)
+        for label, (x, y) in state.get('markers', {}).items():
+            self._addMarker(label, QtCore.QPointF(x, y))
 
         self.channel = args['channel']
         self.channel.subscribe(self)
@@ -265,8 +273,14 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
                      (roi['size'].x(), roi['size'].y()),
                      roi['angle'], self.displayImage.ui.roiBtn.isChecked())
 
-        return roi_state, self.actionAutoScale.isChecked(), \
-            self.displayImage.ui.histogram.gradient.saveState()
+        return {
+            'roi_state': roi_state,
+            'auto_scale': self.actionAutoScale.isChecked(),
+            'gradient_state':
+                self.displayImage.ui.histogram.gradient.saveState(),
+            'markers': {label: (p.x(), p.y()) for label, p
+                        in self.imageItem.markers.items()}
+        }
 
     def dataSet(self, d):
         pass
