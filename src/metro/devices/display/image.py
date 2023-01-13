@@ -4,7 +4,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 
-from itertools import chain
+from itertools import chain, repeat
 import math
 import time
 
@@ -52,6 +52,7 @@ class DataImageItem(pyqtgraph.ImageItem):
         self._coords = None
 
         self._marker_color = QtGui.QColor(255, 0, 0)
+        self._lines_color = QtGui.QColor(200, 200, 0)
 
         font = QtGui.QFont()
         font.setStyleHint(QtGui.QFont.Monospace)
@@ -62,6 +63,8 @@ class DataImageItem(pyqtgraph.ImageItem):
 
         self.local_markers = {}
         self.remote_markers = {}
+        self.vlines = None
+        self.hlines = None
 
     def setCoordinates(self, x, y):
         if len(x) > 1:
@@ -119,9 +122,46 @@ class DataImageItem(pyqtgraph.ImageItem):
         p.resetTransform()
         view = self.getViewBox()
 
+        p.setPen(self._lines_color)
+
+        if self.vlines is not None:
+            height = p.device().geometry().height()
+            flags = QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft
+
+            if isinstance(self.vlines, dict):
+                vlines_it = self.vlines.items()
+            else:
+                vlines_it = zip(self.vlines, repeat(None))
+
+            for dx, text in vlines_it:
+                rx = view.mapViewToDevice(QtCore.QPointF(dx, 0)).x()
+                p.drawLine(rx, 0, rx, height)
+
+                if text is not None:
+                    p.drawText(p.boundingRect(
+                        rx + 4, 4, 1, 1, flags, text), flags, text)
+
+        if self.hlines is not None:
+            width = p.device().geometry().width()
+            flags = QtCore.Qt.AlignTop | QtCore.Qt.AlignRight
+
+            if isinstance(self.hlines, dict):
+                hlines_it = self.hlines.items()
+            else:
+                hlines_it = zip(self.hlines, repeat(None))
+
+            for dy, text in hlines_it:
+                ry = view.mapViewToDevice(QtCore.QPointF(0, dy)).y()
+                p.drawLine(0, ry, width, ry)
+
+                if text is not None:
+                    p.drawText(p.boundingRect(
+                        width - 4, ry + 2, 1, 1, flags, text), flags, text)
+
         flags = QtCore.Qt.AlignHCenter | QtCore.Qt.AlignTop
         p.setPen(self._marker_color)
         p.setFont(self._marker_font)
+
         if isinstance(self.remote_markers, dict):
             marker_it = chain(
                 self.local_markers.items(),
@@ -329,6 +369,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             self.plotItem.setLabel('left', d.dims[y_axis_idx])
 
             self.imageItem.remote_markers = d.attrs.get('markers', None)
+            self.imageItem.vlines = d.attrs.get('vlines', None)
+            self.imageItem.hlines = d.attrs.get('hlines', None)
 
             d = d.data
 
