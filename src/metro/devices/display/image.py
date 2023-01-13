@@ -50,6 +50,17 @@ class DataImageItem(pyqtgraph.ImageItem):
 
         self._coords = None
 
+        self._marker_color = QtGui.QColor(255, 0, 0)
+
+        font = QtGui.QFont()
+        font.setStyleHint(QtGui.QFont.Monospace)
+        font.setWeight(QtGui.QFont.Bold)
+        font.setStretch(QtGui.QFont.Expanded)
+
+        self._marker_font = font
+
+        self.markers = {}
+
     def setCoordinates(self, x, y):
         if len(x) > 1:
             x_min = x.min()
@@ -102,6 +113,22 @@ class DataImageItem(pyqtgraph.ImageItem):
             p.setPen(self.border)
             p.drawRect(self.boundingRect())
 
+        p.save()
+        p.resetTransform()
+        view = self.getViewBox()
+
+        flags = QtCore.Qt.AlignHCenter | QtCore.Qt.AlignTop
+        p.setPen(self._marker_color)
+        p.setFont(self._marker_font)
+        for label, pos in self.markers.items():
+            m = view.mapViewToDevice(pos)
+
+            p.drawLine(m.x() - 20, m.y(), m.x() + 20, m.y())
+            p.drawLine(m.x(), m.y() - 20, m.x(), m.y() + 20)
+            p.drawText(m.x() - 25, m.y() + 20, 50, 40, flags, label)
+
+        p.restore()
+
 
 class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
     ui_file = None
@@ -150,7 +177,17 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             color='#0000BB', top=0, bottom=2))
         self.actionCoordY.setDefaultWidget(menu.labelCoordY)
 
+        self.actionAddMarker = QtGui.QAction('Add marker here', menu)
+        self.actionAddMarker.triggered.connect(
+            self.on_actionAddMarker_triggered)
+
+        self.menuRemoveMarker = QtGui.QMenu('Remove marker', menu)
+        self.menuRemoveMarker.triggered.connect(
+            self.on_menuRemoveMarker_triggered)
+
         menu.insertSeparator(menu.actions()[0])
+        menu.insertMenu(menu.actions()[0], self.menuRemoveMarker)
+        menu.insertAction(menu.actions()[0], self.actionAddMarker)
         menu.insertAction(menu.actions()[0], self.actionCoordY)
         menu.insertAction(menu.actions()[0], self.actionCoordX)
 
@@ -233,6 +270,13 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
     def dataSet(self, d):
         pass
+
+    def _addMarker(self, label, pos):
+        self.imageItem.markers[label] = pos
+
+        actionRemove = self.menuRemoveMarker.addAction(
+            f'{label} ({pos.x():.6g}, {pos.y():.6g})')
+        actionRemove.setData(label)
 
     @staticmethod
     def _get_axis_idx(axis_order):
@@ -370,6 +414,26 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             raise ValueError('image only supports DatagramChannel')
 
         return True
+
+    @metro.QSlot(bool)
+    def on_actionAddMarker_triggered(self, flag):
+        text, confirmed = QtWidgets.QInputDialog.getText(
+            None, self.windowTitle(), 'Name for new marker'
+        )
+
+        if not confirmed or not text:
+            return
+
+        if text in self.imageItem.markers:
+            self.showError('A marker with that name already exists.')
+            return
+
+        self._addMarker(text, self.viewBox.last_data_pos)
+
+    # Should be @metro.QSlot(QtCore.QAction)
+    def on_menuRemoveMarker_triggered(self, action):
+        self.imageItem.markers.pop(action.data(), None)
+        self.menuRemoveMarker.removeAction(action)
 
     @metro.QSlot(bool)
     def on_actionPauseDrawing_toggled(self, flag):
