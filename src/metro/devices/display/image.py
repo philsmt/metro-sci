@@ -29,6 +29,21 @@ default_gradient['ticks'][0] = (1e-3, default_gradient['ticks'][0][1])
 default_gradient['ticks'].insert(0, (0.0, (0, 0, 0, 255)))
 
 
+class DataViewBox(pyqtgraph.ViewBox):
+    def raiseContextMenu(self, ev):
+        menu = self.getMenu(ev)
+        if menu is not None:
+            # In newer pyqtgraph versions, a better implementation may
+            # se GraphicsScene.sigMouseClicked and interact with
+            # GraphicsScene.addParentContextMenus or QMenu.aboutToSHow().
+            self.last_data_pos = self.mapSceneToView(ev.scenePos())
+
+            menu.labelCoordX.setText(f'X: {self.last_data_pos.x()}')
+            menu.labelCoordY.setText(f'Y: {self.last_data_pos.y()}')
+
+            super().raiseContextMenu(ev)
+
+
 class DataImageItem(pyqtgraph.ImageItem):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -101,7 +116,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.history_streak = args['history_streak']
         self.axis_order = args['axis_order']
 
-        self.plotItem = pyqtgraph.PlotItem()
+        self.viewBox = DataViewBox()
+        self.plotItem = pyqtgraph.PlotItem(viewBox=self.viewBox)
         self.imageItem = DataImageItem()
         self.imageItem.setOpts(axisOrder=self.axis_order)
 
@@ -109,11 +125,34 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             self, view=self.plotItem, imageItem=self.imageItem)
         self.displayImage._opt_2d_parallel_profiles = True
 
-        view = self.plotItem.getViewBox()
-        view.setAspectLocked(False)
+        # Must be set after creating the other pyqtgraph objects.
+        self.viewBox.setAspectLocked(False)
 
-        menu = view.menu
+        menu = self.viewBox.menu
         menu.addSeparator()
+
+        label_css = '''QLabel {{
+            color: {color};
+            font-family: monospace;
+            padding: {top} 4 {bottom} 5px;
+            font-size: 15px
+        }}'''
+
+        self.actionCoordX = QtWidgets.QWidgetAction(menu)
+        menu.labelCoordX = QtWidgets.QLabel('')
+        menu.labelCoordX.setStyleSheet(label_css.format(
+            color='#BB0000', top=4, bottom=1))
+        self.actionCoordX.setDefaultWidget(menu.labelCoordX)
+
+        self.actionCoordY = QtWidgets.QWidgetAction(menu)
+        menu.labelCoordY = QtWidgets.QLabel('')
+        menu.labelCoordY.setStyleSheet(label_css.format(
+            color='#0000BB', top=0, bottom=2))
+        self.actionCoordY.setDefaultWidget(menu.labelCoordY)
+
+        menu.insertSeparator(menu.actions()[0])
+        menu.insertAction(menu.actions()[0], self.actionCoordY)
+        menu.insertAction(menu.actions()[0], self.actionCoordX)
 
         self.actionPauseDrawing = menu.addAction('Pause drawing')
         self.actionPauseDrawing.setCheckable(True)
