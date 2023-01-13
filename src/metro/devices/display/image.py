@@ -9,6 +9,9 @@ import time
 
 import numpy as np
 import xarray as xr
+from PyQt5 import QtCore
+from PyQt5 import QtGui
+from PyQt5 import QtWidgets
 
 import metro
 from metro.external import pyqtgraph
@@ -20,7 +23,7 @@ pyqtgraph.setConfigOptions(antialias=False)
 # lower bracket though for very small values (< 1e-3 relatively) which
 # is pure black.
 from metro.external.pyqtgraph.graphicsItems.GradientEditorItem \
-    import Gradients
+    import Gradients  # noqa
 default_gradient = Gradients['viridis'].copy()
 default_gradient['ticks'][0] = (1e-3, default_gradient['ticks'][0][1])
 default_gradient['ticks'].insert(0, (0.0, (0, 0, 0, 255)))
@@ -57,7 +60,7 @@ class DataImageItem(pyqtgraph.ImageItem):
         if self._coords is None:
             return super().boundingRect()
 
-        return metro.QtCore.QRectF(*self._coords)
+        return QtCore.QRectF(*self._coords)
 
     def paint(self, p, *args):
         # Verbatim copy of ImageItem.paint() except for the actual
@@ -76,9 +79,9 @@ class DataImageItem(pyqtgraph.ImageItem):
             else self.image.shape[:2][::-1]
 
         if self._coords is None:
-            p.drawImage(metro.QtCore.QRectF(0, 0, *shape), self.qimage)
+            p.drawImage(QtCore.QRectF(0, 0, *shape), self.qimage)
         else:
-            p.drawImage(metro.QtCore.QRectF(*self._coords), self.qimage)
+            p.drawImage(QtCore.QRectF(*self._coords), self.qimage)
 
         if self.border is not None:
             p.setPen(self.border)
