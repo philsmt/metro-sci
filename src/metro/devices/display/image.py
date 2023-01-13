@@ -4,6 +4,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 
+from itertools import chain
 import math
 import time
 
@@ -59,7 +60,8 @@ class DataImageItem(pyqtgraph.ImageItem):
 
         self._marker_font = font
 
-        self.markers = {}
+        self.local_markers = {}
+        self.remote_markers = {}
 
     def setCoordinates(self, x, y):
         if len(x) > 1:
@@ -120,12 +122,26 @@ class DataImageItem(pyqtgraph.ImageItem):
         flags = QtCore.Qt.AlignHCenter | QtCore.Qt.AlignTop
         p.setPen(self._marker_color)
         p.setFont(self._marker_font)
-        for label, pos in self.markers.items():
+        if isinstance(self.remote_markers, dict):
+            marker_it = chain(
+                self.local_markers.items(),
+                ((v, QtCore.QPointF(*k))
+                 for k, v in self.remote_markers.items()))
+        elif isinstance(self.remote_markers, list):
+            marker_it = chain(
+                self.local_markers.items(),
+                ((None, QtCore.QPointF(*x)) for x in self.remote_markers))
+        else:
+            marker_it = self.local_markers.items()
+
+        for label, pos in marker_it:
             m = view.mapViewToDevice(pos)
 
             p.drawLine(m.x() - 20, m.y(), m.x() + 20, m.y())
             p.drawLine(m.x(), m.y() - 20, m.x(), m.y() + 20)
-            p.drawText(m.x() - 25, m.y() + 20, 50, 40, flags, label)
+
+            if label is not None:
+                p.drawText(m.x() - 25, m.y() + 20, 50, 40, flags, label)
 
         p.restore()
 
@@ -279,14 +295,14 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             'gradient_state':
                 self.displayImage.ui.histogram.gradient.saveState(),
             'markers': {label: (p.x(), p.y()) for label, p
-                        in self.imageItem.markers.items()}
+                        in self.imageItem.local_markers.items()}
         }
 
     def dataSet(self, d):
         pass
 
     def _addMarker(self, label, pos):
-        self.imageItem.markers[label] = pos
+        self.imageItem.local_markers[label] = pos
 
         actionRemove = self.menuRemoveMarker.addAction(
             f'{label} ({pos.x():.6g}, {pos.y():.6g})')
@@ -311,6 +327,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             self.plotItem.setLabel('bottom', d.dims[x_axis_idx])
             y = d.coords[d.dims[y_axis_idx]].data
             self.plotItem.setLabel('left', d.dims[y_axis_idx])
+
+            self.imageItem.remote_markers = d.attrs.get('markers', None)
 
             d = d.data
 
@@ -438,7 +456,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         if not confirmed or not text:
             return
 
-        if text in self.imageItem.markers:
+        if text in self.imageItem.local_markers:
             self.showError('A marker with that name already exists.')
             return
 
@@ -446,7 +464,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
     # Should be @metro.QSlot(QtCore.QAction)
     def on_menuRemoveMarker_triggered(self, action):
-        self.imageItem.markers.pop(action.data(), None)
+        self.imageItem.local_markers.pop(action.data(), None)
         self.menuRemoveMarker.removeAction(action)
 
     @metro.QSlot(bool)
