@@ -4,7 +4,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 
-from itertools import chain, repeat
+from itertools import repeat
 import math
 import time
 
@@ -51,7 +51,8 @@ class DataImageItem(pyqtgraph.ImageItem):
 
         self._coords = None
 
-        self._marker_color = QtGui.QColor(255, 0, 0)
+        self._local_marker_color = QtGui.QColor(200, 0, 0)
+        self._remote_marker_color = QtGui.QColor(0, 0, 200)
         self._lines_color = QtGui.QColor(200, 200, 0)
 
         font = QtGui.QFont()
@@ -92,6 +93,18 @@ class DataImageItem(pyqtgraph.ImageItem):
             return super().boundingRect()
 
         return QtCore.QRectF(*self._coords)
+
+    def _drawMarkers(self, p, view, markers):
+        flags = QtCore.Qt.AlignHCenter | QtCore.Qt.AlignTop
+        for label, pos in markers:
+            m = view.mapViewToDevice(pos)
+
+            p.drawLine(m.x() - 20, m.y(), m.x() + 20, m.y())
+            p.drawLine(m.x(), m.y() - 20, m.x(), m.y() + 20)
+
+            if label is not None:
+                p.drawText(p.boundingRect(
+                    m.x(), m.y() + 20, 1, 1, flags, label), flags, label)
 
     def paint(self, p, *args):
         # Verbatim copy of ImageItem.paint() except for the actual
@@ -158,30 +171,21 @@ class DataImageItem(pyqtgraph.ImageItem):
                     p.drawText(p.boundingRect(
                         width - 4, ry + 2, 1, 1, flags, text), flags, text)
 
-        flags = QtCore.Qt.AlignHCenter | QtCore.Qt.AlignTop
-        p.setPen(self._marker_color)
         p.setFont(self._marker_font)
 
+        p.setPen(self._local_marker_color)
+        self._drawMarkers(p, view, self.local_markers.items())
+
+        p.setPen(self._remote_marker_color)
         if isinstance(self.remote_markers, dict):
-            marker_it = chain(
-                self.local_markers.items(),
-                ((v, QtCore.QPointF(*k))
-                 for k, v in self.remote_markers.items()))
+            self._drawMarkers(p, view, (
+                (v, QtCore.QPointF(*k))
+                for k, v in self.remote_markers.items()
+            ))
         elif isinstance(self.remote_markers, list):
-            marker_it = chain(
-                self.local_markers.items(),
-                ((None, QtCore.QPointF(*x)) for x in self.remote_markers))
-        else:
-            marker_it = self.local_markers.items()
-
-        for label, pos in marker_it:
-            m = view.mapViewToDevice(pos)
-
-            p.drawLine(m.x() - 20, m.y(), m.x() + 20, m.y())
-            p.drawLine(m.x(), m.y() - 20, m.x(), m.y() + 20)
-
-            if label is not None:
-                p.drawText(m.x() - 25, m.y() + 20, 50, 40, flags, label)
+            self._drawMarkers(p, view, (
+                (None, QtCore.QPointF(*x)) for x in self.remote_markers
+            ))
 
         p.restore()
 
