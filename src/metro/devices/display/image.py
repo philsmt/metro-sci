@@ -66,6 +66,8 @@ class DataImageItem(pyqtgraph.ImageItem):
         self.remote_markers = {}
         self.vlines = None
         self.hlines = None
+        self.rects = None
+        self.circles = None
 
     def setCoordinates(self, x, y):
         if len(x) > 1:
@@ -170,6 +172,52 @@ class DataImageItem(pyqtgraph.ImageItem):
                 if text is not None:
                     p.drawText(p.boundingRect(
                         width - 4, ry + 2, 1, 1, flags, text), flags, text)
+
+        if self.rects is not None:
+            flags = QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft
+
+            if isinstance(self.rects, dict):
+                rects_it = self.rects.items()
+            else:
+                rects_it = zip(self.rects, repeat(None))
+
+            for (x1, y1, x2, y2), text in rects_it:
+                rect = QtCore.QRectF(
+                    view.mapViewToDevice(QtCore.QPointF(x1, y1)),
+                    view.mapViewToDevice(QtCore.QPointF(x2, y2)))
+
+                p.drawRect(rect)
+
+                if text is not None:
+                    bl = rect.bottomLeft()
+                    p.drawText(p.boundingRect(
+                        bl.x(), bl.y() + 1, 1, 1, flags, text
+                    ), flags, text)
+
+        if self.ellipses is not None:
+            flags = QtCore.Qt.AlignTop | QtCore.Qt.AlignHCenter
+
+            if isinstance(self.ellipses, dict):
+                ellipses_it = self.ellipses.items()
+            else:
+                ellipses_it = zip(self.ellipses, repeat(None))
+
+            for (x, y, *r), text in ellipses_it:
+                if len(r) == 1:
+                    r_x = r_y = r[0]
+                elif len(r) > 1:
+                    r_x, r_y = r[:2]
+
+                rect = QtCore.QRectF(
+                    view.mapViewToDevice(QtCore.QPointF(x - r_x, y - r_y)),
+                    view.mapViewToDevice(QtCore.QPointF(x + r_x, y + r_y)))
+
+                p.drawEllipse(rect)
+
+                if text is not None:
+                    p.drawText(p.boundingRect(
+                        rect.center().x(), rect.bottom() + 1, 1, 1, flags, text
+                    ), flags, text)
 
         p.setFont(self._marker_font)
 
@@ -375,6 +423,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             self.imageItem.remote_markers = d.attrs.get('markers', None)
             self.imageItem.vlines = d.attrs.get('vlines', None)
             self.imageItem.hlines = d.attrs.get('hlines', None)
+            self.imageItem.rects = d.attrs.get('rects', None)
+            self.imageItem.ellipses = d.attrs.get('ellipses', None)
 
             d = d.data
 
