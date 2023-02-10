@@ -4,6 +4,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 
+from itertools import repeat
 import math
 import time
 
@@ -50,7 +51,9 @@ class DataImageItem(pyqtgraph.ImageItem):
 
         self._coords = None
 
-        self._marker_color = QtGui.QColor(255, 0, 0)
+        self._local_marker_color = QtGui.QColor(200, 0, 0)
+        self._remote_marker_color = QtGui.QColor(0, 0, 200)
+        self._lines_color = QtGui.QColor(200, 200, 0)
 
         font = QtGui.QFont()
         font.setStyleHint(QtGui.QFont.Monospace)
@@ -59,7 +62,12 @@ class DataImageItem(pyqtgraph.ImageItem):
 
         self._marker_font = font
 
-        self.markers = {}
+        self.local_markers = {}
+        self.remote_markers = {}
+        self.vlines = None
+        self.hlines = None
+        self.rects = None
+        self.circles = None
 
     def setCoordinates(self, x, y):
         if len(x) > 1:
@@ -87,6 +95,18 @@ class DataImageItem(pyqtgraph.ImageItem):
             return super().boundingRect()
 
         return QtCore.QRectF(*self._coords)
+
+    def _drawMarkers(self, p, view, markers):
+        flags = QtCore.Qt.AlignHCenter | QtCore.Qt.AlignTop
+        for label, pos in markers:
+            m = view.mapViewToDevice(pos)
+
+            p.drawLine(m.x() - 20, m.y(), m.x() + 20, m.y())
+            p.drawLine(m.x(), m.y() - 20, m.x(), m.y() + 20)
+
+            if label is not None:
+                p.drawText(p.boundingRect(
+                    m.x(), m.y() + 20, 1, 1, flags, label), flags, label)
 
     def paint(self, p, *args):
         # Verbatim copy of ImageItem.paint() except for the actual
@@ -117,15 +137,103 @@ class DataImageItem(pyqtgraph.ImageItem):
         p.resetTransform()
         view = self.getViewBox()
 
-        flags = QtCore.Qt.AlignHCenter | QtCore.Qt.AlignTop
-        p.setPen(self._marker_color)
-        p.setFont(self._marker_font)
-        for label, pos in self.markers.items():
-            m = view.mapViewToDevice(pos)
+        p.setPen(self._lines_color)
 
-            p.drawLine(m.x() - 20, m.y(), m.x() + 20, m.y())
-            p.drawLine(m.x(), m.y() - 20, m.x(), m.y() + 20)
-            p.drawText(m.x() - 25, m.y() + 20, 50, 40, flags, label)
+        if self.vlines is not None:
+            height = p.device().geometry().height()
+            flags = QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft
+
+            if isinstance(self.vlines, dict):
+                vlines_it = self.vlines.items()
+            else:
+                vlines_it = zip(self.vlines, repeat(None))
+
+            for dx, text in vlines_it:
+                rx = view.mapViewToDevice(QtCore.QPointF(dx, 0)).x()
+                p.drawLine(rx, 0, rx, height)
+
+                if text is not None:
+                    p.drawText(p.boundingRect(
+                        rx + 4, 4, 1, 1, flags, text), flags, text)
+
+        if self.hlines is not None:
+            width = p.device().geometry().width()
+            flags = QtCore.Qt.AlignTop | QtCore.Qt.AlignRight
+
+            if isinstance(self.hlines, dict):
+                hlines_it = self.hlines.items()
+            else:
+                hlines_it = zip(self.hlines, repeat(None))
+
+            for dy, text in hlines_it:
+                ry = view.mapViewToDevice(QtCore.QPointF(0, dy)).y()
+                p.drawLine(0, ry, width, ry)
+
+                if text is not None:
+                    p.drawText(p.boundingRect(
+                        width - 4, ry + 2, 1, 1, flags, text), flags, text)
+
+        if self.rects is not None:
+            flags = QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft
+
+            if isinstance(self.rects, dict):
+                rects_it = self.rects.items()
+            else:
+                rects_it = zip(self.rects, repeat(None))
+
+            for (x1, y1, x2, y2), text in rects_it:
+                rect = QtCore.QRectF(
+                    view.mapViewToDevice(QtCore.QPointF(x1, y1)),
+                    view.mapViewToDevice(QtCore.QPointF(x2, y2)))
+
+                p.drawRect(rect)
+
+                if text is not None:
+                    bl = rect.bottomLeft()
+                    p.drawText(p.boundingRect(
+                        bl.x(), bl.y() + 1, 1, 1, flags, text
+                    ), flags, text)
+
+        if self.ellipses is not None:
+            flags = QtCore.Qt.AlignTop | QtCore.Qt.AlignHCenter
+
+            if isinstance(self.ellipses, dict):
+                ellipses_it = self.ellipses.items()
+            else:
+                ellipses_it = zip(self.ellipses, repeat(None))
+
+            for (x, y, *r), text in ellipses_it:
+                if len(r) == 1:
+                    r_x = r_y = r[0]
+                elif len(r) > 1:
+                    r_x, r_y = r[:2]
+
+                rect = QtCore.QRectF(
+                    view.mapViewToDevice(QtCore.QPointF(x - r_x, y - r_y)),
+                    view.mapViewToDevice(QtCore.QPointF(x + r_x, y + r_y)))
+
+                p.drawEllipse(rect)
+
+                if text is not None:
+                    p.drawText(p.boundingRect(
+                        rect.center().x(), rect.bottom() + 1, 1, 1, flags, text
+                    ), flags, text)
+
+        p.setFont(self._marker_font)
+
+        p.setPen(self._local_marker_color)
+        self._drawMarkers(p, view, self.local_markers.items())
+
+        p.setPen(self._remote_marker_color)
+        if isinstance(self.remote_markers, dict):
+            self._drawMarkers(p, view, (
+                (v, QtCore.QPointF(*k))
+                for k, v in self.remote_markers.items()
+            ))
+        elif isinstance(self.remote_markers, list):
+            self._drawMarkers(p, view, (
+                (None, QtCore.QPointF(*x)) for x in self.remote_markers
+            ))
 
         p.restore()
 
@@ -279,14 +387,14 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             'gradient_state':
                 self.displayImage.ui.histogram.gradient.saveState(),
             'markers': {label: (p.x(), p.y()) for label, p
-                        in self.imageItem.markers.items()}
+                        in self.imageItem.local_markers.items()}
         }
 
     def dataSet(self, d):
         pass
 
     def _addMarker(self, label, pos):
-        self.imageItem.markers[label] = pos
+        self.imageItem.local_markers[label] = pos
 
         actionRemove = self.menuRemoveMarker.addAction(
             f'{label} ({pos.x():.6g}, {pos.y():.6g})')
@@ -311,6 +419,12 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             self.plotItem.setLabel('bottom', d.dims[x_axis_idx])
             y = d.coords[d.dims[y_axis_idx]].data
             self.plotItem.setLabel('left', d.dims[y_axis_idx])
+
+            self.imageItem.remote_markers = d.attrs.get('markers', None)
+            self.imageItem.vlines = d.attrs.get('vlines', None)
+            self.imageItem.hlines = d.attrs.get('hlines', None)
+            self.imageItem.rects = d.attrs.get('rects', None)
+            self.imageItem.ellipses = d.attrs.get('ellipses', None)
 
             d = d.data
 
@@ -438,7 +552,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         if not confirmed or not text:
             return
 
-        if text in self.imageItem.markers:
+        if text in self.imageItem.local_markers:
             self.showError('A marker with that name already exists.')
             return
 
@@ -446,7 +560,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
     # Should be @metro.QSlot(QtCore.QAction)
     def on_menuRemoveMarker_triggered(self, action):
-        self.imageItem.markers.pop(action.data(), None)
+        self.imageItem.local_markers.pop(action.data(), None)
         self.menuRemoveMarker.removeAction(action)
 
     @metro.QSlot(bool)
