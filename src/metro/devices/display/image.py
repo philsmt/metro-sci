@@ -4,11 +4,15 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 
+from itertools import repeat
 import math
 import time
 
 import numpy as np
 import xarray as xr
+from PyQt5 import QtCore
+from PyQt5 import QtGui
+from PyQt5 import QtWidgets
 
 import metro
 from metro.external import pyqtgraph
@@ -20,10 +24,25 @@ pyqtgraph.setConfigOptions(antialias=False)
 # lower bracket though for very small values (< 1e-3 relatively) which
 # is pure black.
 from metro.external.pyqtgraph.graphicsItems.GradientEditorItem \
-    import Gradients
+    import Gradients  # noqa
 default_gradient = Gradients['viridis'].copy()
 default_gradient['ticks'][0] = (1e-3, default_gradient['ticks'][0][1])
 default_gradient['ticks'].insert(0, (0.0, (0, 0, 0, 255)))
+
+
+class DataViewBox(pyqtgraph.ViewBox):
+    def raiseContextMenu(self, ev):
+        menu = self.getMenu(ev)
+        if menu is not None:
+            # In newer pyqtgraph versions, a better implementation may
+            # se GraphicsScene.sigMouseClicked and interact with
+            # GraphicsScene.addParentContextMenus or QMenu.aboutToSHow().
+            self.last_data_pos = self.mapSceneToView(ev.scenePos())
+
+            menu.labelCoordX.setText(f'X: {self.last_data_pos.x()}')
+            menu.labelCoordY.setText(f'Y: {self.last_data_pos.y()}')
+
+            super().raiseContextMenu(ev)
 
 
 class DataImageItem(pyqtgraph.ImageItem):
@@ -31,6 +50,24 @@ class DataImageItem(pyqtgraph.ImageItem):
         super().__init__(*args, **kwargs)
 
         self._coords = None
+
+        self._local_marker_color = QtGui.QColor(200, 0, 0)
+        self._remote_marker_color = QtGui.QColor(0, 0, 200)
+        self._lines_color = QtGui.QColor(200, 200, 0)
+
+        font = QtGui.QFont()
+        font.setStyleHint(QtGui.QFont.Monospace)
+        font.setWeight(QtGui.QFont.Bold)
+        font.setStretch(QtGui.QFont.Expanded)
+
+        self._marker_font = font
+
+        self.local_markers = {}
+        self.remote_markers = {}
+        self.vlines = None
+        self.hlines = None
+        self.rects = None
+        self.circles = None
 
     def setCoordinates(self, x, y):
         if len(x) > 1:
@@ -57,7 +94,19 @@ class DataImageItem(pyqtgraph.ImageItem):
         if self._coords is None:
             return super().boundingRect()
 
-        return metro.QtCore.QRectF(*self._coords)
+        return QtCore.QRectF(*self._coords)
+
+    def _drawMarkers(self, p, view, markers):
+        flags = QtCore.Qt.AlignHCenter | QtCore.Qt.AlignTop
+        for label, pos in markers:
+            m = view.mapViewToDevice(pos)
+
+            p.drawLine(m.x() - 20, m.y(), m.x() + 20, m.y())
+            p.drawLine(m.x(), m.y() - 20, m.x(), m.y() + 20)
+
+            if label is not None:
+                p.drawText(p.boundingRect(
+                    m.x(), m.y() + 20, 1, 1, flags, label), flags, label)
 
     def paint(self, p, *args):
         # Verbatim copy of ImageItem.paint() except for the actual
@@ -76,13 +125,117 @@ class DataImageItem(pyqtgraph.ImageItem):
             else self.image.shape[:2][::-1]
 
         if self._coords is None:
-            p.drawImage(metro.QtCore.QRectF(0, 0, *shape), self.qimage)
+            p.drawImage(QtCore.QRectF(0, 0, *shape), self.qimage)
         else:
-            p.drawImage(metro.QtCore.QRectF(*self._coords), self.qimage)
+            p.drawImage(QtCore.QRectF(*self._coords), self.qimage)
 
         if self.border is not None:
             p.setPen(self.border)
             p.drawRect(self.boundingRect())
+
+        p.save()
+        p.resetTransform()
+        view = self.getViewBox()
+
+        p.setPen(self._lines_color)
+
+        if self.vlines is not None:
+            height = p.device().geometry().height()
+            flags = QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft
+
+            if isinstance(self.vlines, dict):
+                vlines_it = self.vlines.items()
+            else:
+                vlines_it = zip(self.vlines, repeat(None))
+
+            for dx, text in vlines_it:
+                rx = view.mapViewToDevice(QtCore.QPointF(dx, 0)).x()
+                p.drawLine(rx, 0, rx, height)
+
+                if text is not None:
+                    p.drawText(p.boundingRect(
+                        rx + 4, 4, 1, 1, flags, text), flags, text)
+
+        if self.hlines is not None:
+            width = p.device().geometry().width()
+            flags = QtCore.Qt.AlignTop | QtCore.Qt.AlignRight
+
+            if isinstance(self.hlines, dict):
+                hlines_it = self.hlines.items()
+            else:
+                hlines_it = zip(self.hlines, repeat(None))
+
+            for dy, text in hlines_it:
+                ry = view.mapViewToDevice(QtCore.QPointF(0, dy)).y()
+                p.drawLine(0, ry, width, ry)
+
+                if text is not None:
+                    p.drawText(p.boundingRect(
+                        width - 4, ry + 2, 1, 1, flags, text), flags, text)
+
+        if self.rects is not None:
+            flags = QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft
+
+            if isinstance(self.rects, dict):
+                rects_it = self.rects.items()
+            else:
+                rects_it = zip(self.rects, repeat(None))
+
+            for (x1, y1, x2, y2), text in rects_it:
+                rect = QtCore.QRectF(
+                    view.mapViewToDevice(QtCore.QPointF(x1, y1)),
+                    view.mapViewToDevice(QtCore.QPointF(x2, y2)))
+
+                p.drawRect(rect)
+
+                if text is not None:
+                    bl = rect.bottomLeft()
+                    p.drawText(p.boundingRect(
+                        bl.x(), bl.y() + 1, 1, 1, flags, text
+                    ), flags, text)
+
+        if self.ellipses is not None:
+            flags = QtCore.Qt.AlignTop | QtCore.Qt.AlignHCenter
+
+            if isinstance(self.ellipses, dict):
+                ellipses_it = self.ellipses.items()
+            else:
+                ellipses_it = zip(self.ellipses, repeat(None))
+
+            for (x, y, *r), text in ellipses_it:
+                if len(r) == 1:
+                    r_x = r_y = r[0]
+                elif len(r) > 1:
+                    r_x, r_y = r[:2]
+
+                rect = QtCore.QRectF(
+                    view.mapViewToDevice(QtCore.QPointF(x - r_x, y - r_y)),
+                    view.mapViewToDevice(QtCore.QPointF(x + r_x, y + r_y)))
+
+                p.drawEllipse(rect)
+
+                if text is not None:
+                    p.drawText(p.boundingRect(
+                        rect.center().x(), rect.bottom() + 1, 1, 1, flags, text
+                    ), flags, text)
+
+        p.setFont(self._marker_font)
+
+        p.setPen(self._local_marker_color)
+        self._drawMarkers(p, view, self.local_markers.items())
+
+        p.setPen(self._remote_marker_color)
+        if isinstance(self.remote_markers, dict):
+            self._drawMarkers(p, view, (
+                (v, QtCore.QPointF(*k))
+                for k, v in self.remote_markers.items()
+            ))
+        elif isinstance(self.remote_markers, list):
+            self._drawMarkers(p, view, (
+                (None, QtCore.QPointF(*x)) for x in self.remote_markers
+            ))
+
+        p.restore()
 
 
 class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
@@ -98,19 +251,65 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.history_streak = args['history_streak']
         self.axis_order = args['axis_order']
 
-        self.plotItem = pyqtgraph.PlotItem()
+        if state is None:
+            state = {}
+        elif not isinstance(state, dict):
+            # Compatibility with tuple serialization.
+            state = {
+                'roi_state': state[0],
+                'auto_scale': state[1],
+                'gradient_scale': state[2],
+            }
+
+        self.viewBox = DataViewBox()
+        self.plotItem = pyqtgraph.PlotItem(viewBox=self.viewBox)
         self.imageItem = DataImageItem()
         self.imageItem.setOpts(axisOrder=self.axis_order)
 
         self.displayImage = pyqtgraph.ImageView(
             self, view=self.plotItem, imageItem=self.imageItem)
         self.displayImage._opt_2d_parallel_profiles = True
+        self.displayImage.ui.histogram.gradient.restoreState(
+            state.get('gradient_state', default_gradient))
 
-        view = self.plotItem.getViewBox()
-        view.setAspectLocked(False)
+        # Must be set after creating the other pyqtgraph objects.
+        self.viewBox.setAspectLocked(False)
 
-        menu = view.menu
+        menu = self.viewBox.menu
         menu.addSeparator()
+
+        label_css = '''QLabel {{
+            color: {color};
+            font-family: monospace;
+            padding: {top} 4 {bottom} 5px;
+            font-size: 15px
+        }}'''
+
+        self.actionCoordX = QtWidgets.QWidgetAction(menu)
+        menu.labelCoordX = QtWidgets.QLabel('')
+        menu.labelCoordX.setStyleSheet(label_css.format(
+            color='#BB0000', top=4, bottom=1))
+        self.actionCoordX.setDefaultWidget(menu.labelCoordX)
+
+        self.actionCoordY = QtWidgets.QWidgetAction(menu)
+        menu.labelCoordY = QtWidgets.QLabel('')
+        menu.labelCoordY.setStyleSheet(label_css.format(
+            color='#0000BB', top=0, bottom=2))
+        self.actionCoordY.setDefaultWidget(menu.labelCoordY)
+
+        self.actionAddMarker = QtGui.QAction('Add marker here', menu)
+        self.actionAddMarker.triggered.connect(
+            self.on_actionAddMarker_triggered)
+
+        self.menuRemoveMarker = QtGui.QMenu('Remove marker', menu)
+        self.menuRemoveMarker.triggered.connect(
+            self.on_menuRemoveMarker_triggered)
+
+        menu.insertSeparator(menu.actions()[0])
+        menu.insertMenu(menu.actions()[0], self.menuRemoveMarker)
+        menu.insertAction(menu.actions()[0], self.actionAddMarker)
+        menu.insertAction(menu.actions()[0], self.actionCoordY)
+        menu.insertAction(menu.actions()[0], self.actionCoordX)
 
         self.actionPauseDrawing = menu.addAction('Pause drawing')
         self.actionPauseDrawing.setCheckable(True)
@@ -127,7 +326,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
         self.actionAutoScale = menu.addAction('Always rescale Z axis')
         self.actionAutoScale.setCheckable(True)
-        self.actionAutoScale.setChecked(False)
+        self.actionAutoScale.setChecked(state.get('auto_scale', False))
         self.actionAutoScale.toggled.connect(
             self.on_actionAutoScale_toggled
         )
@@ -158,9 +357,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
         self.fit_curves = {}
 
-        if state is not None:
-            roi_state = state[0]
-
+        roi_state = state.get('roi_state', None)
+        if roi_state is not None:
             self.displayImage.roi.setPos(*roi_state[0])
             self.displayImage.roi.setSize(roi_state[1])
             self.displayImage.roi.setAngle(roi_state[2])
@@ -168,11 +366,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             if roi_state[3]:
                 self.displayImage.ui.roiBtn.click()
 
-            self.actionAutoScale.setChecked(state[1])
-            self.displayImage.ui.histogram.gradient.restoreState(state[2])
-        else:
-            self.displayImage.ui.histogram.gradient.restoreState(
-                default_gradient)
+        for label, (x, y) in state.get('markers', {}).items():
+            self._addMarker(label, QtCore.QPointF(x, y))
 
         self.channel = args['channel']
         self.channel.subscribe(self)
@@ -186,11 +381,24 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
                      (roi['size'].x(), roi['size'].y()),
                      roi['angle'], self.displayImage.ui.roiBtn.isChecked())
 
-        return roi_state, self.actionAutoScale.isChecked(), \
-            self.displayImage.ui.histogram.gradient.saveState()
+        return {
+            'roi_state': roi_state,
+            'auto_scale': self.actionAutoScale.isChecked(),
+            'gradient_state':
+                self.displayImage.ui.histogram.gradient.saveState(),
+            'markers': {label: (p.x(), p.y()) for label, p
+                        in self.imageItem.local_markers.items()}
+        }
 
     def dataSet(self, d):
         pass
+
+    def _addMarker(self, label, pos):
+        self.imageItem.local_markers[label] = pos
+
+        actionRemove = self.menuRemoveMarker.addAction(
+            f'{label} ({pos.x():.6g}, {pos.y():.6g})')
+        actionRemove.setData(label)
 
     @staticmethod
     def _get_axis_idx(axis_order):
@@ -211,6 +419,12 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             self.plotItem.setLabel('bottom', d.dims[x_axis_idx])
             y = d.coords[d.dims[y_axis_idx]].data
             self.plotItem.setLabel('left', d.dims[y_axis_idx])
+
+            self.imageItem.remote_markers = d.attrs.get('markers', None)
+            self.imageItem.vlines = d.attrs.get('vlines', None)
+            self.imageItem.hlines = d.attrs.get('hlines', None)
+            self.imageItem.rects = d.attrs.get('rects', None)
+            self.imageItem.ellipses = d.attrs.get('ellipses', None)
 
             d = d.data
 
@@ -328,6 +542,26 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             raise ValueError('image only supports DatagramChannel')
 
         return True
+
+    @metro.QSlot(bool)
+    def on_actionAddMarker_triggered(self, flag):
+        text, confirmed = QtWidgets.QInputDialog.getText(
+            None, self.windowTitle(), 'Name for new marker'
+        )
+
+        if not confirmed or not text:
+            return
+
+        if text in self.imageItem.local_markers:
+            self.showError('A marker with that name already exists.')
+            return
+
+        self._addMarker(text, self.viewBox.last_data_pos)
+
+    # Should be @metro.QSlot(QtCore.QAction)
+    def on_menuRemoveMarker_triggered(self, action):
+        self.imageItem.local_markers.pop(action.data(), None)
+        self.menuRemoveMarker.removeAction(action)
 
     @metro.QSlot(bool)
     def on_actionPauseDrawing_toggled(self, flag):
