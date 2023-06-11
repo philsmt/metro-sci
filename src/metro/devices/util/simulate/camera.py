@@ -4,7 +4,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 
-import numpy
+import numpy as np
 
 import metro
 
@@ -34,4 +34,6 @@ class Device(metro.CoreDevice):
 
     @metro.QSlot()
     def on_tick(self):
-        self.channel.addData(numpy.random.randn(*self.shape))
+        data = np.random.randn(*self.shape)
+        data *= np.arange(data.shape[0])[:, None]
+        self.channel.addData(data)
