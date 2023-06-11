@@ -88,7 +88,7 @@ class DataImageItem(pyqtgraph.ImageItem):
         self.vlines = None
         self.hlines = None
         self.rects = None
-        self.circles = None
+        self.ellipses = None
 
     def setCoordinates(self, x, y):
         if len(x) > 1:
