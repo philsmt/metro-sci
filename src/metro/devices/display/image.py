@@ -31,6 +31,26 @@ default_gradient['ticks'].insert(0, (0.0, (0, 0, 0, 255)))
 
 
 class DataViewBox(pyqtgraph.ViewBox):
+    def _get_last_data_z(self):
+        for item in self.addedItems:
+            if isinstance(item, DataImageItem):
+                break
+        else:
+            return 'n/a'
+
+        image = item.image
+
+        if image is None:
+            return 'n/a'
+
+        x = int(self.last_data_pos.x())
+        y = int(self.last_data_pos.y())
+
+        if x < 0 or x >= image.shape[1] or y < 0 or y >= image.shape[0]:
+            return 'n/a'
+
+        return image[y, x]
+
     def raiseContextMenu(self, ev):
         menu = self.getMenu(ev)
         if menu is not None:
@@ -41,6 +61,7 @@ class DataViewBox(pyqtgraph.ViewBox):
 
             menu.labelCoordX.setText(f'X: {self.last_data_pos.x()}')
             menu.labelCoordY.setText(f'Y: {self.last_data_pos.y()}')
+            menu.labelCoordZ.setText(f'Z: {self._get_last_data_z()}')
 
             super().raiseContextMenu(ev)
 
@@ -67,7 +88,7 @@ class DataImageItem(pyqtgraph.ImageItem):
         self.vlines = None
         self.hlines = None
         self.rects = None
-        self.circles = None
+        self.ellipses = None
 
     def setCoordinates(self, x, y):
         if len(x) > 1:
@@ -294,8 +315,14 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.actionCoordY = QtWidgets.QWidgetAction(menu)
         menu.labelCoordY = QtWidgets.QLabel('')
         menu.labelCoordY.setStyleSheet(label_css.format(
-            color='#0000BB', top=0, bottom=2))
+            color='#0000BB', top=2, bottom=2))
         self.actionCoordY.setDefaultWidget(menu.labelCoordY)
+
+        self.actionCoordZ = QtWidgets.QWidgetAction(menu)
+        menu.labelCoordZ = QtWidgets.QLabel('')
+        menu.labelCoordZ.setStyleSheet(label_css.format(
+            color='#007700', top=0, bottom=2))
+        self.actionCoordZ.setDefaultWidget(menu.labelCoordZ)
 
         self.actionAddMarker = QtGui.QAction('Add marker here', menu)
         self.actionAddMarker.triggered.connect(
@@ -308,6 +335,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         menu.insertSeparator(menu.actions()[0])
         menu.insertMenu(menu.actions()[0], self.menuRemoveMarker)
         menu.insertAction(menu.actions()[0], self.actionAddMarker)
+        menu.insertAction(menu.actions()[0], self.actionCoordZ)
         menu.insertAction(menu.actions()[0], self.actionCoordY)
         menu.insertAction(menu.actions()[0], self.actionCoordX)
 
