@@ -238,6 +238,23 @@ class DataImageItem(pyqtgraph.ImageItem):
         p.restore()
 
 
+# Inject our own LUTWidget.
+from metro.external.pyqtgraph.imageview \
+    import ImageViewTemplate_pyqt5 as imageview_tpl
+
+class DataHistogramLUTWidget(imageview_tpl.HistogramLUTWidget):
+    def mousePressEvent(self, ev):
+        super().mousePressEvent(ev)
+        self._device.pause_drawing = True
+
+    def mouseReleaseEvent(self, ev):
+        super().mouseReleaseEvent(ev)
+        if not self._device.actionPauseDrawing.isChecked():
+            self._device.pause_drawing = False
+
+imageview_tpl.HistogramLUTWidget = DataHistogramLUTWidget
+
+
 class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
     ui_file = None
 
@@ -271,6 +288,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.displayImage._opt_2d_parallel_profiles = True
         self.displayImage.ui.histogram.gradient.restoreState(
             state.get('gradient_state', default_gradient))
+
+        self.displayImage.ui.histogram._device = self
 
         # Must be set after creating the other pyqtgraph objects.
         self.viewBox.setAspectLocked(False)
@@ -373,6 +392,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.channel.subscribe(self)
 
     def finalize(self):
+        del self.displayImage.ui.histogram._device
         self.channel.unsubscribe(self)
 
     def serialize(self):
