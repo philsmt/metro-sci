@@ -204,6 +204,29 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.menuContext = QtWidgets.QMenu()
         self.menuContext.triggered.connect(self.on_menuContext_triggered)
 
+        label_css = '''QLabel {{
+            color: {color};
+            font-family: monospace;
+            padding: {top} 4 {bottom} 5px;
+            font-size: 15px
+        }}'''
+
+        self.actionCoordX = QtWidgets.QWidgetAction(self.menuContext)
+        self.labelCoordX = QtWidgets.QLabel('')
+        self.labelCoordX.setStyleSheet(label_css.format(
+            color='#BB0000', top=4, bottom=1))
+        self.actionCoordX.setDefaultWidget(self.labelCoordX)
+
+        self.actionCoordY = QtWidgets.QWidgetAction(self.menuContext)
+        self.labelCoordY = QtWidgets.QLabel('')
+        self.labelCoordY.setStyleSheet(label_css.format(
+            color='#0000BB', top=2, bottom=2))
+        self.actionCoordY.setDefaultWidget(self.labelCoordY)
+
+        self.menuContext.addAction(self.actionCoordX)
+        self.menuContext.addAction(self.actionCoordY)
+        self.menuContext.addSeparator()
+
         self.actionIndexEdit = self.menuContext.addAction('Edit index...')
         self.actionTitleEdit = self.menuContext.addAction('Edit title...')
 
@@ -1011,6 +1034,15 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
     @metro.QSlot(QtCore.QPoint)
     def on_menuContext_requested(self, pos):
+        plot_x = pos.x() - self.plot_geometry[0]
+        plot_y = self.size().height() - pos.y() - self.plot_geometry[1]
+
+        data_x = self.plot_axes[0] + plot_x / self.plot_transform[0]
+        data_y = self.plot_axes[2] + plot_y / self.plot_transform[1]
+
+        self.labelCoordX.setText(f'X: {data_x}')
+        self.labelCoordY.setText(f'Y: {data_y}')
+
         self.menuContext.popup(self.mapToGlobal(pos))
 
     # @metro.QSlot(QtCore.QAction)
