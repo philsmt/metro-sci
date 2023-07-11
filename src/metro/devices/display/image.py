@@ -264,14 +264,23 @@ from metro.external.pyqtgraph.imageview \
     import ImageViewTemplate_pyqt5 as imageview_tpl
 
 class DataHistogramLUTWidget(imageview_tpl.HistogramLUTWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.paused_by_mouse = False
+
     def mousePressEvent(self, ev):
         super().mousePressEvent(ev)
-        self._device.pause_drawing = True
+
+        if not self._device.pause_drawing:
+            self._device.pause_drawing = True
+            self.paused_by_mouse = True
 
     def mouseReleaseEvent(self, ev):
         super().mouseReleaseEvent(ev)
-        if not self._device.actionPauseDrawing.isChecked():
+
+        if self.paused_by_mouse:
             self._device.pause_drawing = False
+            self.paused_by_mouse = False
 
 imageview_tpl.HistogramLUTWidget = DataHistogramLUTWidget
 
@@ -389,6 +398,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
         self.pause_drawing = False
         self.redraw_once = False
+        self.paused_by_hotkey = False
         self.auto_z_scale = True  # Always scale once in the beginning
         self.scale_z_once = False
 
@@ -590,6 +600,16 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             raise ValueError('image only supports DatagramChannel')
 
         return True
+
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key_Control and not self.pause_drawing:
+            self.pause_drawing = True
+            self.paused_by_hotkey = True
+
+    def keyReleaseEvent(self, event):
+        if event.key() == QtCore.Qt.Key_Control and self.paused_by_hotkey:
+            self.pause_drawing = False
+            self.paused_by_hotkey = False
 
     @metro.QSlot(bool)
     def on_actionAddMarker_triggered(self, flag):
