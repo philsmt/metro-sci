@@ -57,6 +57,17 @@ class AbstractApplication(object):
         # a PyQt5 application in this case.
         sys.excepthook = _on_exception
 
+        # Set AppUserModelID for Windows 7 and later so that Metro uses
+        # its assigned taskbar icon instead of grabbing the one with the
+        # same AppUserModelID (would probably result in no icon at all)
+        if os.name == 'nt':
+            try:
+                myappid = u"{}.{}".format(metro.SRC_ROOT, metro.WINDOW_TITLE)
+                from ctypes import windll
+                windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+            except AttributeError:
+                pass
+
         metro.app = self
         metro.experimental = args.experimental
 
