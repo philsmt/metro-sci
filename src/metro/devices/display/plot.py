@@ -44,7 +44,7 @@ class Device(single_plot.Device, metro.DisplayDevice, fittable_plot.Device):
         self.plot_item.enableAutoRange('x', True)
 
         if args['steps']:
-            self.curve = self.plot_item.plot(stepMode=True, pen='y')
+            self.curve = self.plot_item.plot([0], [], stepMode=True, pen='y')
             self.x_len_offset = 1
             self.x_val_offset = -0.5
         else:
