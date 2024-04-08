@@ -20,7 +20,7 @@ def parse_args(prog_name, cli_hook=None):
         '--profile', dest='profile', action='store', type=str,
         help='load the given profile (either the name without .json '
              'relative to the profile directory or complete path) on '
-             'startup'
+             'startup.'
     )
 
     mode_group = cli.add_mutually_exclusive_group()
@@ -28,7 +28,7 @@ def parse_args(prog_name, cli_hook=None):
     cli_actions['kiosk'] = mode_group.add_argument(
         '--kiosk', dest='kiosk_mode', action='store_true',
         help='start in kiosk mode with hidden controller window and a '
-             'single visible device controlling the application state'
+             'single visible device controlling the application state.'
     )
 
     cli_actions['core'] = mode_group.add_argument(
@@ -41,12 +41,12 @@ def parse_args(prog_name, cli_hook=None):
 
     cli_actions['experimental'] = dev_group.add_argument(
         '--experimental', dest='experimental', action='store_true',
-        help='turns on various experimental features'
+        help='turns on various experimental features.'
     )
 
     cli_actions['gc-debug'] = dev_group.add_argument(
         '--gc-debug', dest='gc_debug', action='store', type=int, default=0,
-        help='specify the debug level for the Python garbage collector'
+        help='specify the debug level for the python garbage collector.'
     )
 
     if cli_hook is not None:
@@ -75,8 +75,7 @@ def init_core():
 
     if sys.version_info[:2] < (3, 3):
         globals()['die']('Requires python version >= 3.3 (found {0})'.format(
-            sys.version[:sys.version.find(' ')]
-        ))
+            sys.version[:sys.version.find(' ')]))
 
     try:
         import typing             # noqa (F401)
@@ -93,14 +92,14 @@ def init_core():
     # classes without any actual dependency.
 
     globals().update({
-        'QtCore':    QtCore,
-        'QObject':   QtCore.QObject,
-        'QSignal':   QtCore.pyqtSignal,
-        'QSlot':     QtCore.pyqtSlot,
+        'QtCore': QtCore,
+        'QObject': QtCore.QObject,
+        'QSignal': QtCore.pyqtSignal,
+        'QSlot': QtCore.pyqtSlot,
         'QProperty': QtCore.pyqtProperty,
-        'QTimer':    QtCore.QTimer,
-        'QThread':   QtCore.QThread,
-        'QConsts':   QtCore.Qt
+        'QTimer': QtCore.QTimer,
+        'QThread': QtCore.QThread,
+        'QConsts': QtCore.Qt
     })
 
     if not load_GUI:
@@ -108,77 +107,77 @@ def init_core():
             def __getattr__(self, name):
                 return QtCore.QObject
 
-        QtGui     = EmptyQtModule()  # noqa
+        QtGui = EmptyQtModule()  # noqa
         QtWidgets = EmptyQtModule()  # noqa
-        QtUic     = EmptyQtModule()  # noqa
+        QtUic = EmptyQtModule()  # noqa
 
         globals().update({
-            'QtGui':     QtGui,
+            'QtGui': QtGui,
             'QtWidgets': QtWidgets,
-            'QtUic':     QtUic
+            'QtUic': QtUic
         })
 
     from .services import channels
     globals().update({
-        'channels':        channels,
-        'getChannel':      channels.get,
-        'getAllChannels':  channels.getAll,
-        'queryChannels':   channels.query,
+        'channels': channels,
+        'getChannel': channels.get,
+        'getAllChannels': channels.getAll,
+        'queryChannels': channels.query,
         'AbstractChannel': channels.AbstractChannel,
-        'ChannelAdapter':  channels.ChannelAdapter,
-        'StreamChannel':   channels.StreamChannel,
-        'NumericChannel':  channels.NumericChannel,
+        'ChannelAdapter': channels.ChannelAdapter,
+        'StreamChannel': channels.StreamChannel,
+        'NumericChannel': channels.NumericChannel,
         'DatagramChannel': channels.DatagramChannel,
-        'LogChannel':      channels.LogChannel
+        'LogChannel': channels.LogChannel
     })
 
     from .services import measure
     globals().update({
-        'measure':         measure,
-        'RunBlock':        measure.RunBlock,
-        'StepBlock':       measure.StepBlock,
-        'BlockListener':   measure.BlockListener,
-        'ScanOperator':    measure.ScanOperator,
+        'measure': measure,
+        'RunBlock': measure.RunBlock,
+        'StepBlock': measure.StepBlock,
+        'BlockListener': measure.BlockListener,
+        'ScanOperator': measure.ScanOperator,
         'TriggerOperator': measure.TriggerOperator,
-        'LimitOperator':   measure.LimitOperator,
-        'StatusOperator':  measure.StatusOperator,
-        'Measurement':     measure.Measurement
+        'LimitOperator': measure.LimitOperator,
+        'StatusOperator': measure.StatusOperator,
+        'Measurement': measure.Measurement
     })
 
     from .services import devices
     globals().update({
-        'loadDevice':             devices.load,
-        'createDevice':           devices.create,
-        'getDevice':              devices.get,
-        'getAllDevices':          devices.getAll,
-        'getOperator':            devices.getOperator,
-        'getAllOperators':        devices.getAllOperators,
-        'killAllDevices':         devices.killAll,
+        'loadDevice': devices.load,
+        'createDevice': devices.create,
+        'getDevice': devices.get,
+        'getAllDevices': devices.getAll,
+        'getOperator': devices.getOperator,
+        'getAllOperators': devices.getAllOperators,
+        'killAllDevices': devices.killAll,
         'getAvailableDeviceName': devices.getAvailableName,
-        'getDefaultDeviceName':   devices.getDefaultName,
-        'findDeviceForChannel':   devices.findDeviceForChannel,
-        'checkForDeviceLeaks':    devices.checkForLeaks,
-        'OperatorThread':         devices.OperatorThread,
-        'GenericDevice':          devices.GenericDevice,
-        'DisplayDevice':          devices.DisplayDevice,
-        'CoreDevice':             devices.CoreDevice,
-        'TransientDevice':        devices.TransientDevice,
-        'WidgetDevice':           devices.WidgetDevice,
-        'DeviceGroup':            devices.DeviceGroup,
-        'WindowGroupWidget':      devices.WindowGroupWidget,
-        'TabGroupWidget':         devices.TabGroupWidget
+        'getDefaultDeviceName': devices.getDefaultName,
+        'findDeviceForChannel': devices.findDeviceForChannel,
+        'checkForDeviceLeaks': devices.checkForLeaks,
+        'OperatorThread': devices.OperatorThread,
+        'GenericDevice': devices.GenericDevice,
+        'DisplayDevice': devices.DisplayDevice,
+        'CoreDevice': devices.CoreDevice,
+        'TransientDevice': devices.TransientDevice,
+        'WidgetDevice': devices.WidgetDevice,
+        'DeviceGroup': devices.DeviceGroup,
+        'WindowGroupWidget': devices.WindowGroupWidget,
+        'TabGroupWidget': devices.TabGroupWidget
     })
 
     from .frontend import arguments
     globals().update({
-        'arguments':        arguments,
+        'arguments': arguments,
         'AbstractArgument': arguments.AbstractArgument,
-        'IndexArgument':    arguments.IndexArgument,
+        'IndexArgument': arguments.IndexArgument,
         'ComboBoxArgument': arguments.ComboBoxArgument,
-        'DeviceArgument':   arguments.DeviceArgument,
-        'ChannelArgument':  arguments.ChannelArgument,
+        'DeviceArgument': arguments.DeviceArgument,
+        'ChannelArgument': arguments.ChannelArgument,
         'OperatorArgument': arguments.OperatorArgument,
-        'FileArgument':     arguments.FileArgument
+        'FileArgument': arguments.FileArgument
     })
 
 
@@ -188,6 +187,8 @@ def init_gui():
         load_GUI = True  # initialize GUI modules
     elif load_GUI:
         return  # already initialized GUI modules
+
+    import sys
 
     def die(msg):
         if sys.version_info[0] == 2:
@@ -227,18 +228,16 @@ def init_gui():
         die('An essential dependency ({0}) could not be imported and is '
             'probably missing'.format(str(e)[str(e)[:-1].rfind('\'')+1:-1]))
 
-    import sys
-
     globals().update({
-        'QtGui':     QtGui,
+        'QtGui': QtGui,
         'QtWidgets': QtWidgets,
-        'QtUic':     QtUic,
-        'die':       die
+        'QtUic': QtUic,
+        'die': die
     })
 
 
-def init_metro(core_mode=False, kiosk_mode=False, window_title='Metro',
-               local_path='~/.metro', profile_path='~/.metro/profiles'):
+def init(core_mode=False, kiosk_mode=False, window_title='Metro',
+         local_path='~/.metro', profile_path='~/.metro/profiles'):
     import os
     import pkg_resources
 
@@ -251,14 +250,14 @@ def init_metro(core_mode=False, kiosk_mode=False, window_title='Metro',
     os.makedirs(profile_path, exist_ok=True)
 
     globals().update({
-        'WINDOW_TITLE':      window_title,
-        'SRC_ROOT':          src_path,
-        'LOCAL_PATH':        local_path,
-        'PROFILE_PATH':      profile_path,
-        'resource_exists':   pkg_resources.resource_exists,
+        'WINDOW_TITLE': window_title,
+        'SRC_ROOT': src_path,
+        'LOCAL_PATH': local_path,
+        'PROFILE_PATH': profile_path,
+        'resource_exists': pkg_resources.resource_exists,
         'resource_filename': pkg_resources.resource_filename,
-        'core_mode':         core_mode,
-        'kiosk_mode':        kiosk_mode
+        'core_mode': core_mode,
+        'kiosk_mode': kiosk_mode
     })
 
     # Initialize GUI modules if not in core mode
@@ -271,7 +270,7 @@ def init_metro(core_mode=False, kiosk_mode=False, window_title='Metro',
 
 def start(prog_name='metro', window_title='Metro', cli_hook=None):
     args, argv_left = parse_args(prog_name, cli_hook=cli_hook)
-    init_metro(args.core_mode, args.kiosk_mode, window_title)
+    init(args.core_mode, args.kiosk_mode, window_title)
 
     from .frontend import application
 
