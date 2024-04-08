@@ -25,7 +25,7 @@ import threading
 import traceback
 
 import metro
-metro.init_metro()
+metro.init()  # reinitialization necessary for multiprocessing
 
 _targets = {}
 Target = collections.namedtuple('Target', ['name', 'process', 'active',
