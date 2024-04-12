@@ -86,7 +86,12 @@ class Device(parallel_operator.Device):
                                  stopped=self.rate_timer.stop)
 
     def finalize(self):
-        super().finalize()
+        # Catch the BrokenPipeError in case the process crashed, so that we
+        # can still clean up the channels
+        try:
+            super().finalize()
+        except BrokenPipeError as bpe:
+            self.showError(str(bpe), bpe)
 
         # Close the channels last, since the thread might still add
         # some data

@@ -150,7 +150,13 @@ class Agent(metro.QObject):
     # Called by thread.started signal
     @metro.QSlot()
     def waitForOperatorReady(self):
-        reply = self.ctrl_pipe.recv()
+        # An EOFError is raised when the process crashes, so this has to be
+        # treated here, as it will not be raised in the process to be returned
+        try:
+            reply = self.ctrl_pipe.recv()
+        except EOFError as e:
+            reply = (f"{type(e).__name__} while waiting for the operator",
+                     traceback.format_exc())
 
         if reply is True:
             self.operatorReady.emit()
