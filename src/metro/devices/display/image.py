@@ -466,7 +466,36 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             return 0, 1
 
     def dataAdded(self, d):
-        if isinstance(d, xr.DataArray):
+        if self.history_streak > 0:
+            d = np.squeeze(d)
+
+            # Remove any additional axes
+            while len(d.shape) > 1:
+                d = d[-1]
+
+            if self.history_buffer is None or \
+                    self.history_buffer.shape[1] != len(d):
+                self.history_buffer = np.zeros(
+                    (self.history_streak, len(d)), dtype=d.dtype)
+
+            # Pretty expensive for now
+            self.history_buffer = np.roll(self.history_buffer, 1, axis=0)
+            self.history_buffer[0, :] = d
+
+            # Axis coordinates
+            x = np.arange(self.history_buffer.shape[0])
+
+            if isinstance(d, xr.DataArray):
+                y = d.coords[d.dims[0]].data
+            else:
+                y = np.arange(self.history_buffer.shape[1])
+
+            # Draw the history buffer now
+            d = self.history_buffer
+            axis_order = 'col-major'
+            x_axis_idx, y_axis_idx = self._get_axis_idx(axis_order)
+
+        elif isinstance(d, xr.DataArray):
             axis_order = d.attrs.get('axis_order', self.axis_order)
             if axis_order not in Device.arguments['axis_order']:
                 axis_order = self.axis_order
@@ -492,30 +521,6 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
             x = np.arange(d.shape[x_axis_idx])
             y = np.arange(d.shape[y_axis_idx])
-
-        elif self.history_streak > 0:
-            d = np.squeeze(d)
-
-            # Remove any additional axes
-            while len(d.shape) > 1:
-                d = d[-1]
-
-            if self.history_buffer is None or \
-                    self.history_buffer.shape[1] != len(d):
-                self.history_buffer = np.zeros(
-                    (self.history_streak, len(d)), dtype=d.dtype)
-
-            # Pretty expensive for now
-            self.history_buffer = np.roll(self.history_buffer, 1, axis=0)
-            self.history_buffer[0, :] = d
-
-            # Draw the history buffer now
-            d = self.history_buffer
-            axis_order = 'col-major'
-            x_axis_idx, y_axis_idx = self._get_axis_idx(axis_order)
-
-            x = np.arange(self.history_buffer.shape[0])
-            y = np.arange(self.history_buffer.shape[1])
 
         else:
             raise ValueError('incompatible type')
