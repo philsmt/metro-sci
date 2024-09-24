@@ -29,6 +29,16 @@ default_gradient = Gradients['viridis'].copy()
 default_gradient['ticks'][0] = (1e-3, default_gradient['ticks'][0][1])
 default_gradient['ticks'].insert(0, (0.0, (0, 0, 0, 255)))
 
+from matplotlib import colormaps
+ticks = np.linspace(0.0, 1.0, 20)
+
+for cmap in ['RdBu', 'seismic', 'turbo']:
+    Gradients[cmap] = {'mode': 'rgb', 'ticks': [
+        (x, tuple(color))
+        for x, color
+        in zip(ticks, (colormaps[cmap](ticks, alpha=1.0, bytes=True)))
+    ]}
+
 
 class DataViewBox(pyqtgraph.ViewBox):
     def _get_last_data_z(self):
