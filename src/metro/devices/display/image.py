@@ -562,6 +562,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             self.axis_order = axis_order
 
         self.imageItem.setCoordinates(x, y)
+        self.displayImage.clear()
         self.displayImage.setImage(d, autoLevels=z_scale, autoRange=False)
         self.auto_z_scale = self.actionAutoScale.isChecked()
         end = time.time()
