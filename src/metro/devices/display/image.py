@@ -330,6 +330,10 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         hist_widget.gradient.restoreState(
             state.get('gradient_state', default_gradient))
 
+        levels = state.get('levels', None)
+        if levels is not None:
+            hist_widget.setLevels(*levels)
+
         hist_widget._device = self
 
         # Must be set after creating the other pyqtgraph objects.
@@ -410,8 +414,11 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.pause_drawing = False
         self.redraw_once = False
         self.paused_by_hotkey = False
-        self.auto_z_scale = True  # Always scale once in the beginning
         self.scale_z_once = False
+
+        # Always scale once in the beginning if no state were restored
+        # from a prior state.
+        self.auto_z_scale = levels is None
 
         self.history_buffer = None
 
@@ -455,6 +462,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         return {
             'roi_state': roi_state,
             'auto_scale': self.actionAutoScale.isChecked(),
+            'levels': hist_widget.getLevels(),
             'gradient_state': hist_widget.gradient.saveState(),
             'markers': {label: (p.x(), p.y()) for label, p
                         in self.imageItem.local_markers.items()}
