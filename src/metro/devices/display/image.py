@@ -326,10 +326,15 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.displayImage = pyqtgraph.ImageView(
             self, view=self.plotItem, imageItem=self.imageItem)
         self.displayImage._opt_2d_parallel_profiles = True
-        self.displayImage.ui.histogram.gradient.restoreState(
+        hist_widget = self.displayImage.getHistogramWidget()
+        hist_widget.gradient.restoreState(
             state.get('gradient_state', default_gradient))
 
-        self.displayImage.ui.histogram._device = self
+        levels = state.get('levels', None)
+        if levels is not None:
+            hist_widget.setLevels(*levels)
+
+        hist_widget._device = self
 
         # Must be set after creating the other pyqtgraph objects.
         self.viewBox.setAspectLocked(False)
@@ -409,8 +414,11 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.pause_drawing = False
         self.redraw_once = False
         self.paused_by_hotkey = False
-        self.auto_z_scale = True  # Always scale once in the beginning
         self.scale_z_once = False
+
+        # Always scale once in the beginning if no state were restored
+        # from a prior state.
+        self.auto_z_scale = levels is None
 
         self.history_buffer = None
 
@@ -440,7 +448,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.channel.subscribe(self)
 
     def finalize(self):
-        del self.displayImage.ui.histogram._device
+        del self.displayImage.getHistogramWidget()._device
         self.channel.unsubscribe(self)
 
     def serialize(self):
@@ -449,11 +457,13 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
                      (roi['size'].x(), roi['size'].y()),
                      roi['angle'], self.displayImage.ui.roiBtn.isChecked())
 
+        hist_widget = self.displayImage.getHistogramWidget()
+
         return {
             'roi_state': roi_state,
             'auto_scale': self.actionAutoScale.isChecked(),
-            'gradient_state':
-                self.displayImage.ui.histogram.gradient.saveState(),
+            'levels': hist_widget.getLevels(),
+            'gradient_state': hist_widget.gradient.saveState(),
             'markers': {label: (p.x(), p.y()) for label, p
                         in self.imageItem.local_markers.items()}
         }
