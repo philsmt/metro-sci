@@ -326,10 +326,11 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.displayImage = pyqtgraph.ImageView(
             self, view=self.plotItem, imageItem=self.imageItem)
         self.displayImage._opt_2d_parallel_profiles = True
-        self.displayImage.ui.histogram.gradient.restoreState(
+        hist_widget = self.displayImage.getHistogramWidget()
+        hist_widget.gradient.restoreState(
             state.get('gradient_state', default_gradient))
 
-        self.displayImage.ui.histogram._device = self
+        hist_widget._device = self
 
         # Must be set after creating the other pyqtgraph objects.
         self.viewBox.setAspectLocked(False)
@@ -440,7 +441,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         self.channel.subscribe(self)
 
     def finalize(self):
-        del self.displayImage.ui.histogram._device
+        del self.displayImage.getHistogramWidget()._device
         self.channel.unsubscribe(self)
 
     def serialize(self):
@@ -449,11 +450,12 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
                      (roi['size'].x(), roi['size'].y()),
                      roi['angle'], self.displayImage.ui.roiBtn.isChecked())
 
+        hist_widget = self.displayImage.getHistogramWidget()
+
         return {
             'roi_state': roi_state,
             'auto_scale': self.actionAutoScale.isChecked(),
-            'gradient_state':
-                self.displayImage.ui.histogram.gradient.saveState(),
+            'gradient_state': hist_widget.gradient.saveState(),
             'markers': {label: (p.x(), p.y()) for label, p
                         in self.imageItem.local_markers.items()}
         }
