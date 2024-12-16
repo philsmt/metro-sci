@@ -9,9 +9,6 @@ import subprocess
 from setuptools import Distribution, setup, find_packages
 from setuptools.extension import Extension
 
-# Fetch numpy and Cython as build dependencies.
-Distribution().fetch_build_eggs(['numpy', 'Cython'])
-
 # Safe to import here after line above.
 import numpy
 from Cython.Build import cythonize
@@ -34,7 +31,7 @@ def find_version():
 
 setup(
     name='metro-sci',
-    version=find_version() or 'dev',
+    version='1.0.0',
     author='Philipp Schmidt',
     author_email='philipp.schmidt@xfel.eu',
     description='Framework for experimental control, data acquisition and '
