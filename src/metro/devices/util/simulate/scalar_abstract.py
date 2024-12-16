@@ -18,7 +18,7 @@ class Operator(async_operator.Operator):
         self.offset = args['offset']
 
         self.timer = metro.QTimer(self)
-        self.timer.setInterval(args['interval'] * 1000)
+        self.timer.setInterval(int(args['interval'] * 1000))
         self.timer.timeout.connect(self.tick)
 
     def finalize(self):
