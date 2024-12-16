@@ -24,7 +24,7 @@ class Device(metro.WidgetDevice):
         self.offset = args['offset']
 
         self.timer = metro.QTimer(self)
-        self.timer.setInterval(args['interval'] * 1000)
+        self.timer.setInterval(int(args['interval'] * 1000))
         self.timer.timeout.connect(self.tick)
 
         self.measure_connect(self.measuringStarted, self.measuringStopped)
