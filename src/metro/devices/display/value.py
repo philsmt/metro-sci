@@ -13,7 +13,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
     arguments = {
         'channel': metro.ChannelArgument(),
         'func': ('str', 'repr', 'pprint', 'ndshape'),
-        'scaling': True
+        'scaling': True,
+        'monospace': False
     }
 
     descriptions = {
@@ -22,7 +23,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
         'channel': 'The channel to be displayed.',
         'func': 'The function applied to the value to be displayed that '
                 'generates the string representation.',
-        'scaling': 'Whether to scale font size to window width.'
+        'scaling': 'Whether to scale font size to window width.',
+        'monospace': 'Whether to use a monospace font',
     }
 
     def prepare(self, args, state):
@@ -35,6 +37,10 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
             metro.QtWidgets.QSizePolicy.Expanding,
             metro.QtWidgets.QSizePolicy.Expanding
         )
+
+        if args['monospace']:
+            self.labelDisplay.setFont(metro.QtGui.QFontDatabase.systemFont(
+                metro.QtGui.QFontDatabase.FixedFont))
 
         # main layout
         layout = metro.QtWidgets.QVBoxLayout()
