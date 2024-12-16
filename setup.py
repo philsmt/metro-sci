@@ -6,35 +6,17 @@
 
 import subprocess
 
-from setuptools import Distribution, setup, find_packages
+from setuptools import setup, find_packages
 from setuptools.extension import Extension
-
-# Fetch numpy and Cython as build dependencies.
-Distribution().fetch_build_eggs(['numpy', 'Cython'])
 
 # Safe to import here after line above.
 import numpy
 from Cython.Build import cythonize
 
 
-def find_version():
-    try:
-        short_hash = subprocess.check_output(
-            ['git', 'rev-parse', '--short', 'HEAD'],
-            stderr=subprocess.STDOUT
-        )
-    except (FileNotFoundError, subprocess.CalledProcessError):
-        return None
-    else:
-        if short_hash.startswith(b'fatal'):
-            return None
-        else:
-            return short_hash.decode('ascii').strip()
-
-
 setup(
     name='metro-sci',
-    version=find_version() or 'dev',
+    version='1.0.0',
     author='Philipp Schmidt',
     author_email='philipp.schmidt@xfel.eu',
     description='Framework for experimental control, data acquisition and '
