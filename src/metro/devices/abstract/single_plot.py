@@ -5,7 +5,7 @@
 
 
 import metro
-from metro.external import pyqtgraph
+import pyqtgraph
 
 
 class Device(metro.WidgetDevice, metro.DisplayDevice):
