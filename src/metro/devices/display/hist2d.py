@@ -271,8 +271,9 @@ class DetectorImageWidget(QtWidgets.QWidget):
 
             polygon = self.x_spectrum_polygon
             for i in range(0, n_points):
-                polygon.setPoint(i, i / x_scale,
-                                 145 - int(x_spectrum[x_min+i] / y_scale))
+                polygon.setPoint(
+                    i, int(i / x_scale),
+                    145 - int(x_spectrum[x_min+i] / y_scale))
 
             qp.drawPolyline(polygon)
 
@@ -291,14 +292,14 @@ class DetectorImageWidget(QtWidgets.QWidget):
             x_scale = y_spectrum_max / 85
             y_scale = n_points / self.data_img_dest.height()
 
-            x_offset = 5 + self.data_img_dest.right()
+            x_offset = 5 + int(self.data_img_dest.right())
 
             polygon = self.y_spectrum_polygon
             for i in range(0, n_points):
                 polygon.setPoint(
-                    i, x_offset + int(y_spectrum[y_min+i] / x_scale),
-                    150 + self.data_img_dest.height() - i / y_scale
-                )
+                    i,
+                    x_offset + int(y_spectrum[y_min+i] / x_scale),
+                    150 + int(self.data_img_dest.height() - i / y_scale))
 
             qp.drawPolyline(polygon)
 
@@ -347,12 +348,12 @@ class DetectorImageWidget(QtWidgets.QWidget):
 
         for label, line in zip(self.axes_tick_x_labels,
                                self.axes_tick_x_lines):
-            qp.drawText(line.x1()-40, line.y1()-20, 80, 20,
+            qp.drawText(int(line.x1()) - 40, int(line.y1()) - 20, 80, 20,
                         QtCore.Qt.AlignCenter, str(label))
 
         for label, line in zip(self.axes_tick_y_labels,
                                self.axes_tick_y_lines):
-            qp.drawText(line.x1()+10, line.y1()-10, 80, 20,
+            qp.drawText(int(line.x1()) + 10, int(line.y1()) - 10, 80, 20,
                         QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter,
                         str(label))
 
@@ -524,8 +525,8 @@ class DetectorImageWidget(QtWidgets.QWidget):
 
             coords = roi['coords']
 
-            roi_x = s_x * (coords[0] - self.axes['x_min'])
-            roi_y = s_y * (self.axes['y_max'] - coords[3])
+            roi_x = int(s_x * (coords[0] - self.axes['x_min']))
+            roi_y = int(s_y * (self.axes['y_max'] - coords[3]))
 
             top_visible = bottom_visible = left_visible = right_visible = True
 
@@ -543,8 +544,8 @@ class DetectorImageWidget(QtWidgets.QWidget):
                 top_visible = False
                 roi_y = img_height
 
-            roi_width = s_x * (coords[2] - coords[0])
-            roi_height = s_y * (coords[3] - coords[1])
+            roi_width = int(s_x * (coords[2] - coords[0]))
+            roi_height = int(s_y * (coords[3] - coords[1]))
 
             if (roi_x + roi_width) > img_width:
                 right_visible = False
@@ -1343,8 +1344,8 @@ class DetectorImageWidget(QtWidgets.QWidget):
         mx_60 = max_value * 0.6 + z_min
         mx_80 = max_value * 0.8 + z_min
 
-        color_table = [QtGui.qRgb(255.0, 255.0, 255.0)] * 256
-        color_table[0] = QtGui.qRgb(0.0, 0.0, 0.0)
+        color_table = [QtGui.qRgb(255, 255, 255)] * 256
+        color_table[0] = QtGui.qRgb(0, 0, 0)
 
         grad = QtGui.QLinearGradient()
         grad.setStart(0, 0)
@@ -1382,8 +1383,7 @@ class DetectorImageWidget(QtWidgets.QWidget):
                 blue = (i - mx_80) / (max_value - mx_80)  # rising
 
             color_table[i] = QtGui.qRgb(
-                red * 255.0, green * 255.0, blue * 255.0
-            )
+                int(red * 255.0), int(green * 255.0), int(blue * 255.0))
             grad.setColorAt(1.0 - (i / max_value),
                             QtGui.QColor.fromRgb(color_table[i]))
 
