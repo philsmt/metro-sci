@@ -15,7 +15,7 @@ from PyQt5 import QtWidgets
 
 try:
     import lttbc
-except ImportError:
+except (ImportError, AttributeError):
     lttbc = None
 
 import metro
@@ -542,7 +542,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         # Vertical annotation lines.
         if self.vlines is not None and self.show_annotations:
             div = self.plot_transform[0]
-            y_end = int(-self.plot_geometry[3])
+            y_end = -self.plot_geometry[3]
 
             p.save()
             p.translate(
@@ -558,12 +558,16 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
             for x_data, text in vlines_it:
                 if self.plot_axes[0] < x_data < self.plot_axes[1]:
-                    x_widget = int(x_data * div)
-                    p.drawLine(x_widget, 0, x_widget, y_end)
+                    x_widget = x_data * div
+                    p.drawLine(
+                        QtCore.QPointF(x_widget, 0),
+                        QtCore.QPointF(x_widget, y_end)
+                    )
 
                     if text is not None:
                         p.drawText(p.boundingRect(
-                            x_widget+5, y_end, 1, 1, flags, text),
+                            QtCore.QRectF(x_widget+5, y_end, 1, 1),
+                            flags, text),
                             flags, text)
 
             p.restore()
@@ -571,7 +575,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         # Horizontal annotation lines.
         if self.hlines is not None and self.show_annotations:
             div = self.plot_transform[1]
-            x_end = int(self.plot_geometry[2])
+            x_end = self.plot_geometry[2]
 
             p.save()
             p.translate(
@@ -587,12 +591,13 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
             for y_data, text in hlines_it:
                 if self.plot_axes[2] < y_data < self.plot_axes[3]:
-                    y_widget = int(-y_data * div)
+                    y_widget = -y_data * div
                     p.drawLine(0, y_widget, x_end, y_widget)
 
                     if text is not None:
                         p.drawText(p.boundingRect(
-                            x_end, y_widget, 1, 1, flags, text),
+                            QtCore.QRectF(x_end, y_widget, 1, 1),
+                            flags, text),
                             flags, text)
 
             p.restore()
@@ -790,8 +795,8 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
     def _buildAxisLabel(self, value, x, y, p, flags):
         text = str(value)
-
-        r = p.boundingRect(int(x), int(y), 1, 1, flags, text)
+        
+        r = p.boundingRect(QtCore.QRectF(x, y, 1, 1), flags, text)
         r._flags = flags
         r._str = text
 
