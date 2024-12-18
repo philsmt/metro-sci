@@ -1235,8 +1235,11 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
     def dataAdded(self, d):
         self.ch_data = d
 
+        nan_replacement = 0
         if isinstance(self.ch_data, xr.DataArray):
             self.idx_data = self.ch_data.data[self.index]
+            if "replace_nan" in self.ch_data.attrs:
+                nan_replacement = self.ch_data.attrs["replace_nan"]
 
             if self.idx_data.ndim == 1:
                 self.idx_data = self.idx_data[None, :]
@@ -1267,6 +1270,9 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
         if self.idx_data.shape[1] == 0:
             return
+
+        self.idx_data = np.nan_to_num(self.idx_data, copy=True,
+                                      nan=nan_replacement)
 
         self._notifyFittingCallbacks(self.x, self.idx_data[0])
 
