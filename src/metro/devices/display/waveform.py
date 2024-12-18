@@ -237,6 +237,9 @@ class Device(single_plot.Device, metro.DisplayDevice):
         except TypeError:
             pass
 
+        if not numpy.isfinite(d):
+            return
+
         try:
             self.y_data.append(d)
             self.ma_buffer.append(d)
