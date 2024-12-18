@@ -795,7 +795,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
     def _buildAxisLabel(self, value, x, y, p, flags):
         text = str(value)
-        
+
         r = p.boundingRect(QtCore.QRectF(x, y, 1, 1), flags, text)
         r._flags = flags
         r._str = text
