@@ -383,6 +383,8 @@ class GenericDevice(metro.measure.Node):
         if isinstance(self, QtCore.QObject):
             self.destroyed.connect(_on_device_destroyed)
 
+        # for correct/full initialization set as visible first
+        self.setVisible(True)
         if 'visible' in state:
             self.setVisible(state['visible'])
 
