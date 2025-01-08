@@ -44,7 +44,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice):
         elif args['func'] == 'pprint':
             import pprint
 
-            pretty_printer = pprint.PrettyPrinter(indent=4)
+            pretty_printer = pprint.PrettyPrinter(indent=4, sort_dicts=False)
             self.display_func = pretty_printer.pformat
         elif args['func'] == 'ndshape':
             self.display_func = lambda x: str(x.shape)
