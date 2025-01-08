@@ -85,7 +85,7 @@ setup(
                   include_dirs=[numpy.get_include()]),
     ], language_level=3, build_dir='build'),
 
-    python_requires='>=3.6',
+    python_requires='>=3.11',
     install_requires=['typing', 'PyQt5', 'numpy', 'scipy', 'h5py', 'xarray'],
 
     classifiers=[
@@ -96,7 +96,7 @@ setup(
         'Environment :: X11 Applications :: Qt',
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
-        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.11',
         'Topic :: Scientific/Engineering :: Information Analysis',
         'Topic :: Scientific/Engineering :: Physics',
     ]
