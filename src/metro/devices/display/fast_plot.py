@@ -542,7 +542,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         # Vertical annotation lines.
         if self.vlines is not None and self.show_annotations:
             div = self.plot_transform[0]
-            y_end = -self.plot_geometry[3]
+            y_end = int(-self.plot_geometry[3])
 
             p.save()
             p.translate(
@@ -575,7 +575,7 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
         # Horizontal annotation lines.
         if self.hlines is not None and self.show_annotations:
             div = self.plot_transform[1]
-            x_end = self.plot_geometry[2]
+            x_end = int(self.plot_geometry[2])
 
             p.save()
             p.translate(

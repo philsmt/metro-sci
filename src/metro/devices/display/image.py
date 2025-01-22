@@ -13,6 +13,7 @@ from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 import pyqtgraph
+pyqtgraph.setConfigOptions(antialias=True)
 
 import metro
 from metro.devices.abstract import fittable_plot

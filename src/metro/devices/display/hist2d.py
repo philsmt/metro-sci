@@ -528,8 +528,8 @@ class DetectorImageWidget(QtWidgets.QWidget):
 
             coords = roi['coords']
 
-            roi_x = s_x * (coords[0] - self.axes['x_min'])
-            roi_y = s_y * (self.axes['y_max'] - coords[3])
+            roi_x = int(s_x * (coords[0] - self.axes['x_min']))
+            roi_y = int(s_y * (self.axes['y_max'] - coords[3]))
 
             top_visible = bottom_visible = left_visible = right_visible = True
 
@@ -547,8 +547,8 @@ class DetectorImageWidget(QtWidgets.QWidget):
                 top_visible = False
                 roi_y = img_height
 
-            roi_width = s_x * (coords[2] - coords[0])
-            roi_height = s_y * (coords[3] - coords[1])
+            roi_width = int(s_x * (coords[2] - coords[0]))
+            roi_height = int(s_y * (coords[3] - coords[1]))
 
             if (roi_x + roi_width) > img_width:
                 right_visible = False
