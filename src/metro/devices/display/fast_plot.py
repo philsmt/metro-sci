@@ -15,7 +15,7 @@ from PyQt5 import QtWidgets
 
 try:
     import lttbc
-except (ImportError, AttributeError):
+except ImportError:
     lttbc = None
 
 import metro
