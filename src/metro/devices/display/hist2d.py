@@ -117,8 +117,8 @@ class DetectorImageWidget(QtWidgets.QWidget):
         # The spectrum along y, how often does each y value occur
         self.y_spectrum = numpy.zeros((size_y,), dtype=numpy.int32)
 
-        self.x_spectrum_polygon = QtGui.QPolygon(size_x)
-        self.y_spectrum_polygon = QtGui.QPolygon(size_y)
+        self.x_spectrum_polygon = QtGui.QPolygonF(size_x)
+        self.y_spectrum_polygon = QtGui.QPolygonF(size_y)
 
         self.x_scaling = 1
         self.y_scaling = 1
@@ -268,14 +268,16 @@ class DetectorImageWidget(QtWidgets.QWidget):
             n_points = x_max - x_min
             x_scale = n_points / self.data_img_dest.width()
             y_scale = x_spectrum_max / 130
+            
+            self.x_spectrum_polygon = QtGui.QPolygonF(
+                [QtCore.QPointF(
+                    i / x_scale,
+                    145 - x_spectrum[x_min+i] / y_scale
+                )
+                for i in range(n_points)]
+            )
 
-            polygon = self.x_spectrum_polygon
-            for i in range(0, n_points):
-                polygon.setPoint(
-                    i, int(i / x_scale),
-                    145 - int(x_spectrum[x_min+i] / y_scale))
-
-            qp.drawPolyline(polygon)
+            qp.drawPolyline(self.x_spectrum_polygon)
 
             qp.rotate(90)
             qp.drawText(3, -(self.data_img_dest.width()+22), 150, 20,
@@ -294,14 +296,15 @@ class DetectorImageWidget(QtWidgets.QWidget):
 
             x_offset = 5 + int(self.data_img_dest.right())
 
-            polygon = self.y_spectrum_polygon
-            for i in range(0, n_points):
-                polygon.setPoint(
-                    i,
+            self.y_spectrum_polygon = QtGui.QPolygonF(
+                [QtCore.QPointF(
                     x_offset + int(y_spectrum[y_min+i] / x_scale),
-                    150 + int(self.data_img_dest.height() - i / y_scale))
+                    150 + self.data_img_dest.height() - i / y_scale
+                )
+                for i in range(n_points)]
+            )
 
-            qp.drawPolyline(polygon)
+            qp.drawPolyline(self.y_spectrum_polygon)
 
             qp.drawText(self.data_img_dest.right(), 150 - 22, 97, 20,
                         QtCore.Qt.AlignRight | QtCore.Qt.AlignBottom,
@@ -348,12 +351,12 @@ class DetectorImageWidget(QtWidgets.QWidget):
 
         for label, line in zip(self.axes_tick_x_labels,
                                self.axes_tick_x_lines):
-            qp.drawText(int(line.x1()) - 40, int(line.y1()) - 20, 80, 20,
+            qp.drawText(QtCore.QRectF(line.x1() - 40, line.y1() - 20, 80, 20),
                         QtCore.Qt.AlignCenter, str(label))
 
         for label, line in zip(self.axes_tick_y_labels,
                                self.axes_tick_y_lines):
-            qp.drawText(int(line.x1()) + 10, int(line.y1()) - 10, 80, 20,
+            qp.drawText(QtCore.QRectF(line.x1() + 10, line.y1() - 10, 80, 20),
                         QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter,
                         str(label))
 
@@ -445,7 +448,7 @@ class DetectorImageWidget(QtWidgets.QWidget):
         return r
 
     def _buildRoiAreaRect(self, qp, name, x, y, w, h):
-        r = QtCore.QRect(x, y, w, h)
+        r = QtCore.QRectF(x, y, w, h)
         r.roi_name = name
         r.cursor = QtCore.Qt.SizeAllCursor
         r.type = DetectorImageWidget.HOT_RECT_ROI_AREA
@@ -453,7 +456,7 @@ class DetectorImageWidget(QtWidgets.QWidget):
         self.hot_rects.append(r)
 
     def _buildRoiEdgeRect(self, qp, name, edge_id, x, y, w, h):
-        r = QtCore.QRect(x, y, w, h)
+        r = QtCore.QRectF(x, y, w, h)
         r.roi_name = name
         r.cursor = QtCore.Qt.SizeVerCursor \
             if w > h else QtCore.Qt.SizeHorCursor
@@ -589,7 +592,7 @@ class DetectorImageWidget(QtWidgets.QWidget):
 
             if (left_visible and bottom_visible and right_visible and
                     top_visible):
-                roi['shape'] = QtCore.QRect(roi_x, 150 + roi_y,
+                roi['shape'] = QtCore.QRectF(roi_x, 150 + roi_y,
                                             roi_width, roi_height)
             else:
                 shapes = []
@@ -1091,9 +1094,9 @@ class DetectorImageWidget(QtWidgets.QWidget):
                 self.axes['y_max'] - self.axes['y_min']
             )
 
-        self.x_spectrum_polygon = QtGui.QPolygon(
+        self.x_spectrum_polygon = QtGui.QPolygonF(
             self.axes['x_max'] - self.axes['x_min'])
-        self.y_spectrum_polygon = QtGui.QPolygon(
+        self.y_spectrum_polygon = QtGui.QPolygonF(
             self.axes['y_max'] - self.axes['y_min'])
 
     def _updateProj(self):
