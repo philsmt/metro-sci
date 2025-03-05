@@ -1264,15 +1264,19 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
                 self.idx_data = self.idx_data[1:]
             else:
                 self.x = np.arange(self.idx_data.shape[1])
-
+            # TODO: option to drop instead of replace
             self.x_label = self.y_label = self.legend_entries = \
                 self.vlines = self.hlines = None
 
         if self.idx_data.shape[1] == 0:
             return
 
+        # infinity replaced with very positive / negative values
+        finite_mask = np.isfinite(self.idx_data)
         self.idx_data = np.nan_to_num(self.idx_data, copy=True,
-                                      nan=nan_replacement)
+                                      nan=nan_replacement,
+                                      posinf=1e10,
+                                      neginf=-1e10)
 
         self._notifyFittingCallbacks(self.x, self.idx_data[0])
 
@@ -1303,8 +1307,9 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             self.plot_axes[1] = x_max + x_pad
 
         if self.autoscale_y:
-            y_min = self.idx_data.min()
-            y_max = self.idx_data.max()
+            data_for_scale = self.idx_data[finite_mask]
+            y_min = data_for_scale.min()
+            y_max = data_for_scale.max()
 
             y_pad = (y_max - y_min) * 0.02
 
