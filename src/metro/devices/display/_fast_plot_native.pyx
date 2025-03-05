@@ -89,6 +89,10 @@ cdef inline void draw_pixel(surface* s, int x, int y, int c) noexcept nogil:
         s.ptr[(s.height_complement - y) * s.line_length + x] = c
 
 
+cdef inline void draw_pixel_unsafe(surface* s, int x, int y, int c) noexcept nogil:
+    s.ptr[(s.height_complement - y) * s.line_length + x] = c
+
+
 cdef void draw_rect(surface* s, int x1, int y1, int w, int h, int c) noexcept nogil:
     # Draw a rectangle with x1/y1 as its upper-left edge and size w/h in
     # color c
@@ -126,15 +130,49 @@ cdef inline void draw_square(surface* s, int x, int y, int l, int c) noexcept no
 cdef char clip_line_segment(surface* s, int& x1, int& y1, int& x2, int& y2) noexcept nogil:
     # Clips the line segment provided to bounding box of surface s
     # Return value: 0 for line entirely segment outside bbox
-    if (x1 < s.offset_x and x2 < s.offset_x) or \
-       (x1 > s.offset_x and x2 > s.offset_x) or \
-       (y1 < s.offset_y and y2 < s.offset_y) or \
-       (y1 > s.offset_y and y2 > s.offset_y):
+    if (x1 < s.min_x and x2 < s.min_x) or \
+       (x1 > s.max_x and x2 > s.max_x) or \
+       (y1 < s.min_y and y2 < s.min_y) or \
+       (y1 > s.max_y and y2 > s.max_y):
         return 0
+    cdef double res_x[2]
+    cdef double res_y[2]
+    cdef double slope_y = (<double>y2 - <double>y1) / (<double>x2 - <double>x1)
+    cdef double slope_x = (<double>x2 - <double>x1) / (<double>y2 - <double>y1)
+    res_x[0] = x1
+    res_x[1] = x2
+    res_y[0] = y1
+    res_y[1] = y2
+    cdef int i
+    for i in range(2):
+        if res_x[i] < s.min_x:
+            res_x[i] = s.min_x
+            res_y[i] = (y1 + slope_y * <double>(s.min_x - x1))
+        elif res_x[i] > s.max_x:
+            res_x[i] = s.max_x
+            res_y[i] = (y1 + slope_y * <double>(s.max_x - x1))
+        if res_y[i] < s.min_y:
+            res_y[i] = s.min_y
+            res_x[i] = (x1 + slope_x * <double>(s.min_y - x1))
+        elif res_y[i] > s.max_y:
+            res_y[i] = s.max_y
+            res_x[i] = (x1 + slope_x * <double>(s.max_y - x1))
+    # check if shifting put us outside bounds
+    if (res_x[0] < s.min_x and res_x[1] < s.min_x) or \
+       (res_x[0] > s.max_x and res_x[1] > s.max_x):
+        return 0
+    x1 = <int>res_x[0]
+    x2 = <int>res_x[1]
+    y1 = <int>res_y[0]
+    y2 = <int>res_y[1]
+    return 1
 
 
 cdef void draw_line(surface* s, int x1, int y1, int x2, int y2, int c) noexcept nogil:
     cdef int x, y, dx, dy, ix, iy
+
+    if not clip_line_segment(s, x1, y1, x2, y2):
+        return
 
     # Swap the coordinates in case x1/y1 is bigger than x2/y2.
 
@@ -162,7 +200,7 @@ cdef void draw_line(surface* s, int x1, int y1, int x2, int y2, int c) noexcept 
             y2 = x2
 
         for y from y1 <= y <= y2 by 1:
-            draw_pixel(s, x1, y, c)
+            draw_pixel_unsafe(s, x1, y, c)
 
         return
     elif dy == 0:
@@ -172,7 +210,7 @@ cdef void draw_line(surface* s, int x1, int y1, int x2, int y2, int c) noexcept 
             x2 = y2
 
         for x from x1 <= x <= x2 by 1:
-            draw_pixel(s, x, y1, c)
+            draw_pixel_unsafe(s, x, y1, c)
 
         return
 
@@ -189,7 +227,7 @@ cdef void draw_line(surface* s, int x1, int y1, int x2, int y2, int c) noexcept 
         dx <<= 1
 
         while x != x2:
-            draw_pixel(s, x, y, c)
+            draw_pixel_unsafe(s, x, y, c)
 
             if error >= 0:
                 y += iy
@@ -198,14 +236,14 @@ cdef void draw_line(surface* s, int x1, int y1, int x2, int y2, int c) noexcept 
             x += ix
             error += dy
 
-        draw_pixel(s, x, y, c)
+        draw_pixel_unsafe(s, x, y, c)
     else:
         dx <<= 1
         error = dx - dy
         dy <<= 1
 
         while y != y2:
-            draw_pixel(s, x, y, c);
+            draw_pixel_unsafe(s, x, y, c);
 
             if error >= 0:
                 x += ix
@@ -214,7 +252,7 @@ cdef void draw_line(surface* s, int x1, int y1, int x2, int y2, int c) noexcept 
             y += iy
             error += dx
 
-        draw_pixel(s, x, y, c)
+        draw_pixel_unsafe(s, x, y, c)
 
 
 def stack(numpy.ndarray[y_t, ndim=2, mode="c"] inp,
@@ -310,7 +348,8 @@ def plot(uintptr_t s_bits,
             for i in range(1, N):
                 data_coord_to_image_space(s, data_x[i], data_y[i], cur_x, cur_y)
 
-                if not ((last_x < s.offset_x and cur_x < s.offset_x) or (last_x > s.max_x and cur_x > s.max_x)):
+                if not ((last_x < s.min_x and cur_x < s.min_x) or \
+                        (last_x > s.max_x and cur_x > s.max_x)):
                     draw_line(s, last_x, last_y, cur_x, cur_y, line_color)
                     draw_square(s, cur_x, cur_y, 5, symbol_color)
 
@@ -321,7 +360,8 @@ def plot(uintptr_t s_bits,
             for i in range(1, N):
                 data_coord_to_image_space(s, data_x[i], data_y[i], cur_x, cur_y)
 
-                if not ((last_x < s.offset_x and cur_x < s.offset_x) or (last_x > s.max_x and cur_x > s.max_x)):
+                if not ((last_x < s.min_x and cur_x < s.min_x) or \
+                        (last_x > s.max_x and cur_x > s.max_x)):
                     draw_line(s, last_x, last_y, cur_x, cur_y, line_color)
 
                 last_x = cur_x
