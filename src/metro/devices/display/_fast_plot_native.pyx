@@ -1,3 +1,4 @@
+# distutils: language=c++
 # cython: boundscheck=False, wraparound=False, cdivision=True
 
 # This Source Code Form is subject to the terms of the Mozilla Public
@@ -74,7 +75,12 @@ cdef struct surface:
     double div_y
 
 
-cdef inline void draw_pixel(surface* s, int x, int y, int c) nogil:
+cdef inline void data_coord_to_image_space(surface* s, x_t x, y_t y, int& out_x, int& out_y) noexcept nogil:
+    out_x = <int>(((<double>x - s.start_x) * s.div_x) + s.offset_x)
+    out_y = <int>(((<double>y - s.start_y) * s.div_y) + s.offset_y)
+
+
+cdef inline void draw_pixel(surface* s, int x, int y, int c) noexcept nogil:
     # We currently do pixel-level culling since we lose so little
     # performance here. Sorting the set beforehand will probably
     # only scale for very high data sets.
@@ -83,7 +89,7 @@ cdef inline void draw_pixel(surface* s, int x, int y, int c) nogil:
         s.ptr[(s.height_complement - y) * s.line_length + x] = c
 
 
-cdef void draw_rect(surface* s, int x1, int y1, int w, int h, int c) nogil:
+cdef void draw_rect(surface* s, int x1, int y1, int w, int h, int c) noexcept nogil:
     # Draw a rectangle with x1/y1 as its upper-left edge and size w/h in
     # color c
 
@@ -99,7 +105,7 @@ cdef void draw_rect(surface* s, int x1, int y1, int w, int h, int c) nogil:
         draw_pixel(s, x2, y, c)
 
 
-cdef void fill_rect(surface* s, int x1, int y1, int w, int h, int c) nogil:
+cdef void fill_rect(surface* s, int x1, int y1, int w, int h, int c) noexcept nogil:
     # Draw a filled rectangle with x1/y1 as its upper-left edge and size w/h in
     # color c
 
@@ -111,13 +117,23 @@ cdef void fill_rect(surface* s, int x1, int y1, int w, int h, int c) nogil:
             draw_pixel(s, x, y, c)
 
 
-cdef inline void draw_square(surface* s, int x, int y, int l, int c) nogil:
+cdef inline void draw_square(surface* s, int x, int y, int l, int c) noexcept nogil:
     # Draw a square centered around x/y with length l in color c
 
     draw_rect(s, x - ((l - 1) >> 1), y - ((l - 1) >> 1), l, l, c)
 
 
-cdef void draw_line(surface* s, int x1, int y1, int x2, int y2, int c) nogil:
+cdef char clip_line_segment(surface* s, int& x1, int& y1, int& x2, int& y2) noexcept nogil:
+    # Clips the line segment provided to bounding box of surface s
+    # Return value: 0 for line entirely segment outside bbox
+    if (x1 < s.offset_x and x2 < s.offset_x) or \
+       (x1 > s.offset_x and x2 > s.offset_x) or \
+       (y1 < s.offset_y and y2 < s.offset_y) or \
+       (y1 > s.offset_y and y2 > s.offset_y):
+        return 0
+
+
+cdef void draw_line(surface* s, int x1, int y1, int x2, int y2, int c) noexcept nogil:
     cdef int x, y, dx, dy, ix, iy
 
     # Swap the coordinates in case x1/y1 is bigger than x2/y2.
@@ -276,7 +292,7 @@ def plot(uintptr_t s_bits,
         raise ValueError('len(x) != len(y)')
 
     cdef surface* s = <surface*>s_bits
-    cdef int N = data_y.shape[0], i, cur_x, cur_y, last_x, last_y
+    cdef int N = data_y.shape[0], i, cur_x = 0, cur_y = 0, last_x = 0, last_y = 0
 
     cdef int line_color = (color_idx + 1) * 10 + 1
     cdef int symbol_color = line_color + 1
@@ -285,21 +301,16 @@ def plot(uintptr_t s_bits,
     # is very misleading! Then we can also stop using s.x_max down there
 
     with nogil:
-        last_x = <int>((<double>data_x[0] - s.start_x) * s.div_x) + s.offset_x
-        last_y = <int>((<double>data_y[0] - s.start_y) * s.div_y) + s.offset_y
+        data_coord_to_image_space(s, data_x[0], data_y[0], last_x, last_y)
 
         if marker and last_x >= s.offset_x and last_x <= s.max_x:
             draw_square(s, last_x, last_y, 5, symbol_color)
 
         if marker:
             for i in range(1, N):
-                cur_x = <int>((<double>data_x[i] - s.start_x) * s.div_x) \
-                    + s.offset_x
-                cur_y = <int>((<double>data_y[i] - s.start_y) * s.div_y) \
-                    + s.offset_y
+                data_coord_to_image_space(s, data_x[i], data_y[i], cur_x, cur_y)
 
-                if not ((last_x < s.offset_x and cur_x < s.offset_x) or
-                        (last_x > s.max_x and cur_x > s.max_x)):
+                if not ((last_x < s.offset_x and cur_x < s.offset_x) or (last_x > s.max_x and cur_x > s.max_x)):
                     draw_line(s, last_x, last_y, cur_x, cur_y, line_color)
                     draw_square(s, cur_x, cur_y, 5, symbol_color)
 
@@ -308,13 +319,9 @@ def plot(uintptr_t s_bits,
 
         else:
             for i in range(1, N):
-                cur_x = <int>((<double>data_x[i] - s.start_x) * s.div_x) \
-                    + s.offset_x
-                cur_y = <int>((<double>data_y[i] - s.start_y) * s.div_y) \
-                    + s.offset_y
+                data_coord_to_image_space(s, data_x[i], data_y[i], cur_x, cur_y)
 
-                if not ((last_x < s.offset_x and cur_x < s.offset_x) or
-                        (last_x > s.max_x and cur_x > s.max_x)):
+                if not ((last_x < s.offset_x and cur_x < s.offset_x) or (last_x > s.max_x and cur_x > s.max_x)):
                     draw_line(s, last_x, last_y, cur_x, cur_y, line_color)
 
                 last_x = cur_x
