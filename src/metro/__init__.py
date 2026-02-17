@@ -239,7 +239,6 @@ def init_gui():
 def init(core_mode=False, kiosk_mode=False, window_title='Metro',
          local_path='~/.metro', profile_path='~/.metro/profiles'):
     import os
-    import pkg_resources
 
     src_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -254,8 +253,6 @@ def init(core_mode=False, kiosk_mode=False, window_title='Metro',
         'SRC_ROOT': src_path,
         'LOCAL_PATH': local_path,
         'PROFILE_PATH': profile_path,
-        'resource_exists': pkg_resources.resource_exists,
-        'resource_filename': pkg_resources.resource_filename,
         'core_mode': core_mode,
         'kiosk_mode': kiosk_mode
     })
