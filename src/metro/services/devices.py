@@ -14,7 +14,8 @@
 
 from collections import namedtuple
 from functools import partial
-from pkg_resources import iter_entry_points
+from importlib import resources
+from importlib.metadata import entry_points
 from typing import Optional
 
 import metro
@@ -26,7 +27,7 @@ QtUic = metro.QtUic
 
 
 _device_entry_points = {ep.name: ep for ep
-                        in iter_entry_points('metro.device')}
+                        in entry_points(group='metro.device')}
 
 _devices = {}
 _morgue = []
@@ -846,13 +847,11 @@ def _searchParentUi(cls):
 
     for parent in cls.__bases__:
         if parent.__name__ == 'Device':
-            resource_args = (
-                parent.__module__,
-                parent.__module__[parent.__module__.rfind('.')+1:] + '.ui'
-            )
+            source = resources.files(parent.__module__).joinpath(
+                parent.__module__[parent.__module__.rfind('.')+1:] + '.ui')
 
-            if metro.resource_exists(*resource_args):
-                return metro.resource_filename(*resource_args)
+            if source.exists():
+                return source
             else:
                 return _searchParentUi(parent)
 
@@ -932,23 +931,28 @@ class WidgetDevice(GenericDevice, QtWidgets.QWidget):
         # Either use the attribute or search for ui files with the same
         # name as this module
 
-        # FIX USAGE OF ._path
-        try:
-            ui_file = self.ui_file
-        except AttributeError:
-            res_args = (self.__module__,
-                        f'{self.__module__[self.__module__.rfind(".")+1:]}.ui')
-
-            if metro.resource_exists(*res_args):
-                ui_file = metro.resource_filename(*res_args)
-            else:
-                ui_file = _searchParentUi(self.__class__)
-
         # uic.loadUi requires a working __str__() for debug messages.
         self._name = name
 
+        # FIX USAGE OF ._path
+        try:
+            ui_file = self.ui_file
+
+            if ui_file is not None:
+                ui_file = Path(ui_file)
+        except AttributeError:
+            source = resources.files(self.__module__).joinpath(
+                f'{self.__module__[self.__module__.rfind(".")+1:]}.ui')
+
+            if source.exists():
+                ui_file = source
+            else:
+                ui_file = _searchParentUi(self.__class__)
+
         if ui_file is not None:
-            QtUic.loadUi(ui_file, self)
+            with resources.as_file(ui_file) as ui_path:
+                QtUic.loadUi(ui_path, self)
+
             self.resize(self.sizeHint())
 
         self.setWindowTitle(name)
@@ -1101,12 +1105,11 @@ class WidgetDevice(GenericDevice, QtWidgets.QWidget):
     def createDialog(self, ui_name):
         dialog = QtWidgets.QDialog(self)
 
-        ui_file = metro.resource_filename(
-            self.__module__,
-            f'{self.__module__[self.__module__.rfind(".")+1:]}_{ui_name}.ui'
-        )
+        ui_source = resources.files(self.__module__).joinpath(
+            f'{self.__module__[self.__module__.rfind(".")+1:]}_{ui_name}.ui')
+        with resources.as_file(ui_source) as ui_path:
+            QtUic.loadUi(ui_path, dialog)
 
-        QtUic.loadUi(ui_file, dialog)
         dialog.resize(dialog.sizeHint())
 
         return dialog

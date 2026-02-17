@@ -10,6 +10,7 @@ import subprocess
 import sys
 import time
 import traceback
+from importlib import resources
 
 import numpy  # noqa
 
@@ -777,18 +778,19 @@ class GuiApplication(QtWidgets.QApplication, AbstractApplication):
         # Now actually construct the QApplication instance
         super().__init__(argv_left)
 
-        logo_path = metro.resource_filename(__name__, 'logo.png')
-
         # Create and show the splash screen during loading
-        splash = QtWidgets.QSplashScreen(QtGui.QPixmap(logo_path))
-        splash.show()
+        logo_source = resources.files(__name__).joinpath('logo.png')
+        with resources.as_file(logo_source) as logo_path:
+            splash = QtWidgets.QSplashScreen(QtGui.QPixmap(str(logo_path)))
+            splash.show()
 
         # Ensure that the splash screen gets painted immediately, since the
         # event loop is not yet running
         self.processEvents()
 
         self.setApplicationName(metro.WINDOW_TITLE)
-        self.setWindowIcon(QtGui.QIcon(logo_path))
+        with resources.as_file(logo_source) as logo_path:
+            self.setWindowIcon(QtGui.QIcon(str(logo_path)))
 
         self.dialogs = []
 

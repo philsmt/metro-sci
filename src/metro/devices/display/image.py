@@ -3,7 +3,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
 from itertools import repeat
 import math
 import time
@@ -13,18 +12,18 @@ import xarray as xr
 from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
+import pyqtgraph
+pyqtgraph.setConfigOptions(antialias=False)
 
 import metro
-from metro.external import pyqtgraph
 from metro.devices.abstract import fittable_plot
-
-pyqtgraph.setConfigOptions(antialias=False)
 
 # Create a default gradient, which is almost viridis. It adds a new
 # lower bracket though for very small values (< 1e-3 relatively) which
 # is pure black.
-from metro.external.pyqtgraph.graphicsItems.GradientEditorItem \
-    import Gradients  # noqa
+from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
+#from metro.external.pyqtgraph.graphicsItems.GradientEditorItem \
+#    import Gradients  # noqa
 default_gradient = Gradients['viridis'].copy()
 default_gradient['ticks'][0] = (1e-3, default_gradient['ticks'][0][1])
 default_gradient['ticks'].insert(0, (0.0, (0, 0, 0, 255)))
@@ -78,7 +77,9 @@ class DataViewBox(pyqtgraph.ViewBox):
 
 class DataImageItem(pyqtgraph.ImageItem):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        # ImageView requires the image to be array-like when constructed
+        # with an explicit (this) ImageItem.
+        super().__init__(*args, image=np.zeros((1, 1)), **kwargs)
 
         self._coords = None
 
@@ -132,12 +133,15 @@ class DataImageItem(pyqtgraph.ImageItem):
         for label, pos in markers:
             m = view.mapViewToDevice(pos)
 
-            p.drawLine(m.x() - 20, m.y(), m.x() + 20, m.y())
-            p.drawLine(m.x(), m.y() - 20, m.x(), m.y() + 20)
+            x = int(m.x())
+            y = int(m.y())
+
+            p.drawLine(x - 20, y, x + 20, y)
+            p.drawLine(x, y - 20, x, y + 20)
 
             if label is not None:
                 p.drawText(p.boundingRect(
-                    m.x(), m.y() + 20, 1, 1, flags, label), flags, label)
+                    x, y + 20, 1, 1, flags, label), flags, label)
 
     def paint(self, p, *args):
         # Verbatim copy of ImageItem.paint() except for the actual
@@ -145,9 +149,9 @@ class DataImageItem(pyqtgraph.ImageItem):
 
         if self.image is None:
             return
-        if self.qimage is None:
+        if self._renderRequired:
             self.render()
-            if self.qimage is None:
+            if self._unrenderable:
                 return
         if self.paintMode is not None:
             p.setCompositionMode(self.paintMode)
@@ -163,7 +167,6 @@ class DataImageItem(pyqtgraph.ImageItem):
         if self.border is not None:
             p.setPen(self.border)
             p.drawRect(self.boundingRect())
-
         p.save()
         p.resetTransform()
         view = self.getViewBox()
@@ -180,7 +183,7 @@ class DataImageItem(pyqtgraph.ImageItem):
                 vlines_it = zip(self.vlines, repeat(None))
 
             for dx, text in vlines_it:
-                rx = view.mapViewToDevice(QtCore.QPointF(dx, 0)).x()
+                rx = int(view.mapViewToDevice(QtCore.QPointF(dx, 0)).x())
                 p.drawLine(rx, 0, rx, height)
 
                 if text is not None:
@@ -197,7 +200,7 @@ class DataImageItem(pyqtgraph.ImageItem):
                 hlines_it = zip(self.hlines, repeat(None))
 
             for dy, text in hlines_it:
-                ry = view.mapViewToDevice(QtCore.QPointF(0, dy)).y()
+                ry = int(view.mapViewToDevice(QtCore.QPointF(0, dy)).y())
                 p.drawLine(0, ry, width, ry)
 
                 if text is not None:
@@ -222,7 +225,7 @@ class DataImageItem(pyqtgraph.ImageItem):
                 if text is not None:
                     bl = rect.bottomLeft()
                     p.drawText(p.boundingRect(
-                        bl.x(), bl.y() + 1, 1, 1, flags, text
+                        int(bl.x()), int(bl.y()) + 1, 1, 1, flags, text
                     ), flags, text)
 
         if self.ellipses is not None:
