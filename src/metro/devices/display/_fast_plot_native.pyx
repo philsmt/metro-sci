@@ -74,7 +74,7 @@ cdef struct surface:
     double div_y
 
 
-cdef inline void draw_pixel(surface* s, int x, int y, int c) nogil:
+cdef inline void draw_pixel(surface* s, int x, int y, int c) noexcept nogil:
     # We currently do pixel-level culling since we lose so little
     # performance here. Sorting the set beforehand will probably
     # only scale for very high data sets.
@@ -83,7 +83,7 @@ cdef inline void draw_pixel(surface* s, int x, int y, int c) nogil:
         s.ptr[(s.height_complement - y) * s.line_length + x] = c
 
 
-cdef void draw_rect(surface* s, int x1, int y1, int w, int h, int c) nogil:
+cdef void draw_rect(surface* s, int x1, int y1, int w, int h, int c) noexcept nogil:
     # Draw a rectangle with x1/y1 as its upper-left edge and size w/h in
     # color c
 
@@ -99,7 +99,7 @@ cdef void draw_rect(surface* s, int x1, int y1, int w, int h, int c) nogil:
         draw_pixel(s, x2, y, c)
 
 
-cdef void fill_rect(surface* s, int x1, int y1, int w, int h, int c) nogil:
+cdef void fill_rect(surface* s, int x1, int y1, int w, int h, int c) noexcept nogil:
     # Draw a filled rectangle with x1/y1 as its upper-left edge and size w/h in
     # color c
 
@@ -111,13 +111,13 @@ cdef void fill_rect(surface* s, int x1, int y1, int w, int h, int c) nogil:
             draw_pixel(s, x, y, c)
 
 
-cdef inline void draw_square(surface* s, int x, int y, int l, int c) nogil:
+cdef inline void draw_square(surface* s, int x, int y, int l, int c) noexcept nogil:
     # Draw a square centered around x/y with length l in color c
 
     draw_rect(s, x - ((l - 1) >> 1), y - ((l - 1) >> 1), l, l, c)
 
 
-cdef void draw_line(surface* s, int x1, int y1, int x2, int y2, int c) nogil:
+cdef void draw_line(surface* s, int x1, int y1, int x2, int y2, int c) noexcept nogil:
     cdef int x, y, dx, dy, ix, iy
 
     # Swap the coordinates in case x1/y1 is bigger than x2/y2.
