@@ -7,6 +7,7 @@
 import os
 import json
 import hashlib
+from importlib import resources
 
 import numpy
 import h5py
@@ -100,8 +101,9 @@ class ReplayStreamChannelDialog(QtWidgets.QDialog):
     def __init__(self, path):
         super().__init__()
 
-        QtUic.loadUi(metro.resource_filename(
-            __name__, 'storage_replay.ui'), self)
+        ui_source = resources.files(__name__).joinpath('storage_replay.ui')
+        with resources.as_file(ui_source) as ui_path:
+            QtUic.loadUi(ui_path, self)
 
         self.path = path
         fp = open(path, 'r')
@@ -327,8 +329,9 @@ class ReplayDatagramChannelDialog(QtWidgets.QDialog):
     def __init__(self, path):
         super().__init__()
 
-        QtUic.loadUi(metro.resource_filename(
-            __name__, 'storage_replay.ui'), self)
+        ui_source = resources.files(__name__).joinpath('storage_replay.ui')
+        with resources.as_file(ui_source) as ui_path:
+            QtUic.loadUi(ui_path, self)
 
         self.path = path
 
@@ -393,9 +396,7 @@ class ReplayDatagramChannelDialog(QtWidgets.QDialog):
     @QtCore.pyqtSlot()
     def on_progress_tick(self):
         self.labelProgress.setText(
-            'Loading' + self.progress_iterator % 4 * '.'
-        )
-
+            'Loading' + self.progress_iterator % 4 * '.')
         self.progress_iterator += 1
 
 
@@ -557,8 +558,9 @@ class BrowseStorageDialog(QtWidgets.QDialog):
     def __init__(self):
         super().__init__()
 
-        QtUic.loadUi(metro.resource_filename(
-            __name__, 'storage_browse.ui'), self)
+        ui_source = resources.files(__name__).joinpath('storage_browse.ui')
+        with resources.as_file(ui_source) as ui_path:
+            QtUic.loadUi(ui_path, self)
 
         self.model = BrowseStorageDialog.StorageFilesModel()
         self.tableFiles.setModel(self.model)
@@ -669,8 +671,10 @@ class ConfigStorageDialog(QtWidgets.QDialog):
     def __init__(self):
         super().__init__()
 
-        QtUic.loadUi(metro.resource_filename(
-            __name__, 'storage_config.ui'), self)
+        ui_source = resources.files(__name__).joinpath('storage_config.ui')
+        with resources.as_file(ui_source) as ui_path:
+            QtUic.loadUi(ui_path, self)
+
         self.resize(self.sizeHint())
 
     @metro.QSlot(str)

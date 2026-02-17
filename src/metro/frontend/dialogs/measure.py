@@ -5,6 +5,7 @@
 
 
 import math  # noqa
+from importlib import resources
 
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets
@@ -174,8 +175,10 @@ class ConfigMeasurementDialog(QtWidgets.QDialog):
         def __init__(self, initial_values):
             super().__init__()
 
-            QtUic.loadUi(metro.resource_filename(
-                __name__, 'measure_fixedpoints.ui'), self)
+            ui_source = resources.files(__name__).joinpath(
+                'measure_fixedpoints.ui')
+            with resources.as_file(ui_source) as ui_path:
+                QtUic.loadUi(ui_path, self)
 
             try:
                 self.points = initial_values['points']
@@ -291,8 +294,9 @@ class ConfigMeasurementDialog(QtWidgets.QDialog):
 
         self.quick_ctrl_n_scans = 0
 
-        QtUic.loadUi(metro.resource_filename(
-            __name__, 'measure_config.ui'), self)
+        ui_source = resources.files(__name__).joinpath('measure_config.ui')
+        with resources.as_file(ui_source) as ui_path:
+            QtUic.loadUi(ui_path, self)
 
         self.menuAddScanset = QtWidgets.QMenu(self)
         self.menuAddScanset.addAction(self.actionAddScanset)

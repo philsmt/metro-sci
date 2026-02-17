@@ -7,8 +7,8 @@
 import os
 import time
 from itertools import accumulate
-
-from pkg_resources import iter_entry_points
+from importlib import resources
+from importlib.metadata import entry_points
 
 import metro
 from metro.services import channels, measure, profiles
@@ -42,17 +42,16 @@ def formatTime(seconds):
 
 
 def buildDirectEntryPointMenu(entry_point, menu):
-    for entry_point in iter_entry_points(entry_point):
+    for entry_point in entry_points(group=entry_point):
         menu.addAction(entry_point.name).setData(entry_point.name)
 
 
 def buildRecursiveEntryPointMenu(entry_point, base_menu):
     submenus = {'': base_menu}
 
-    entry_points = sorted(iter_entry_points(entry_point),
-                          key=lambda x: x.name)
+    eps = sorted(entry_points(group=entry_point), key=lambda x: x.name)
 
-    for entry_point in entry_points:
+    for entry_point in eps:
         name = entry_point.name
         parent = name[:name.rfind('.')] if '.' in name else ''
 
@@ -142,8 +141,9 @@ class MainWindow(QtWidgets.QWidget, measure.StatusOperator, measure.Node,
         self.dialogBrowseStorage = None
         self.dialogConfigStorage = None
 
-        QtUic.loadUi(metro.resource_filename(
-            __name__, 'controller.ui'), self)
+        ui_source = resources.files(__name__).joinpath('controller.ui')
+        with resources.as_file(ui_source) as ui_path:
+            QtUic.loadUi(ui_path, self)
 
         self.setWindowTitle(f'Controller - {metro.WINDOW_TITLE}')
 

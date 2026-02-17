@@ -5,6 +5,7 @@
 
 
 import time
+from importlib import resources
 
 import numpy  # noqa
 from PyQt5 import QtCore
@@ -21,8 +22,10 @@ class EditNormalizedChannelDialog(QtWidgets.QDialog):
 
         self.channel = channel
 
-        QtUic.loadUi(metro.resource_filename(
-            __name__, 'channels_edit_normalized.ui'), self)
+        ui_source = resources.files(__name__).joinpath(
+            'channels_edit_normalized.ui')
+        with resources.as_file(ui_source) as ui_path:
+            QtUic.loadUi(ui_path, self)
 
         self.buttonDiscard = self.buttonBox.button(
             QtWidgets.QDialogButtonBox.Discard
@@ -230,8 +233,10 @@ class EditStatisticsChannelDialog(QtWidgets.QDialog):
 
         self.channel = channel
 
-        QtUic.loadUi(metro.resource_filename(
-            __name__, 'channels_edit_statistics.ui'), self)
+        ui_source = resources.files(__name__).joinpath(
+            'channels_edit_statistics.ui')
+        with resources.as_file(ui_source) as ui_path:
+            QtUic.loadUi(ui_path, self)
 
         self.buttonDiscard = self.buttonBox.button(
             QtWidgets.QDialogButtonBox.Discard
@@ -399,8 +404,10 @@ class EditArgumentChannelDialog(QtWidgets.QDialog):
     def __init__(self, parent):
         super().__init__(parent)
 
-        QtUic.loadUi(metro.resource_filename(
-            __name__, 'channels_edit_argument.ui'), self)
+        ui_source = resources.files(__name__).joinpath(
+            'channels_edit_argument.ui')
+        with resources.as_file(ui_source) as ui_path:
+            QtUic.loadUi(ui_path, self)
 
         self.buttonFindChannel.setIcon(self.style().standardIcon(
             QtWidgets.QStyle.SP_DirOpenIcon
@@ -483,8 +490,10 @@ class EditScriptedChannelDialog(QtWidgets.QDialog):
         self.kernel_object = None
         self.init_object = None
 
-        QtUic.loadUi(metro.resource_filename(
-            __name__, 'channels_edit_scripted.ui'), self)
+        ui_source = resources.files(__name__).joinpath(
+            'channels_edit_scripted.ui')
+        with resources.as_file(ui_source) as ui_path:
+            QtUic.loadUi(ui_path, self)
 
         self.buttonDiscard = self.buttonBox.button(
             QtWidgets.QDialogButtonBox.Discard
@@ -824,8 +833,9 @@ class SelectChannelDialog(QtWidgets.QDialog):
                  hint=None, freq=None, type_=None, shape=None):
         super().__init__()
 
-        QtUic.loadUi(metro.resource_filename(
-            __name__, 'channels_select.ui'), self)
+        ui_source = resources.files(__name__).joinpath('channels_select.ui')
+        with resources.as_file(ui_source) as ui_path:
+            QtUic.loadUi(ui_path, self)
 
         channel_names = sorted(metro.queryChannels(hint, freq, type_, shape))
 
@@ -908,8 +918,9 @@ class DisplayChannelDialog(QtWidgets.QDialog):
         self.channel = channel
         self.by_value_idx = None
 
-        QtUic.loadUi(metro.resource_filename(
-            __name__, 'channels_display.ui'), self)
+        ui_source = resources.files(__name__).joinpath('channels_display.ui')
+        with resources.as_file(ui_source) as ui_path:
+            QtUic.loadUi(ui_path, self)
 
         self.setWindowTitle('{0} - Metro'.format(channel.name))
 
