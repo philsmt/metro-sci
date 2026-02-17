@@ -5,6 +5,7 @@
 
 
 import os
+from importlib import resources
 
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets
@@ -17,8 +18,9 @@ class SaveProfileDialog(QtWidgets.QDialog):
     def __init__(self, profiles):
         super().__init__()
 
-        QtUic.loadUi(metro.resource_filename(
-            __name__, 'profiles_save.ui'), self)
+        ui_source = resources.files(__name__).joinpath('profiles_save.ui')
+        with resources.as_file(ui_source) as ui_path:
+            QtUic.loadUi(ui_path, self)
 
         self.setWindowTitle(f'Save profile - {metro.WINDOW_TITLE}')
 
