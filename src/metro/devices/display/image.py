@@ -486,6 +486,17 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
             return 0, 1
 
     def dataAdded(self, d):
+        if self.pause_drawing:
+            if self.redraw_once:
+                self.redraw_once = False
+            else:
+                return
+
+        if self.throttle_total > 0:
+            if self.throttle_i < self.throttle_total:
+                self.throttle_i += 1
+                return
+
         if self.history_streak > 0:
             d = np.squeeze(d)
 
@@ -544,17 +555,6 @@ class Device(metro.WidgetDevice, metro.DisplayDevice, fittable_plot.Device):
 
         else:
             raise ValueError('incompatible type')
-
-        if self.pause_drawing:
-            if self.redraw_once:
-                self.redraw_once = False
-            else:
-                return
-
-        if self.throttle_total > 0:
-            if self.throttle_i < self.throttle_total:
-                self.throttle_i += 1
-                return
 
         z_scale = False
 
