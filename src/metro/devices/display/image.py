@@ -13,7 +13,7 @@ from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 import pyqtgraph
-pyqtgraph.setConfigOptions(antialias=False)
+pyqtgraph.setConfigOptions(antialias=True)
 
 import metro
 from metro.devices.abstract import fittable_plot
@@ -22,8 +22,7 @@ from metro.devices.abstract import fittable_plot
 # lower bracket though for very small values (< 1e-3 relatively) which
 # is pure black.
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
-#from metro.external.pyqtgraph.graphicsItems.GradientEditorItem \
-#    import Gradients  # noqa
+
 default_gradient = Gradients['viridis'].copy()
 default_gradient['ticks'][0] = (1e-3, default_gradient['ticks'][0][1])
 default_gradient['ticks'].insert(0, (0.0, (0, 0, 0, 255)))
@@ -133,15 +132,17 @@ class DataImageItem(pyqtgraph.ImageItem):
         for label, pos in markers:
             m = view.mapViewToDevice(pos)
 
-            x = int(m.x())
-            y = int(m.y())
+            x = m.x()
+            y = m.y()
 
-            p.drawLine(x - 20, y, x + 20, y)
-            p.drawLine(x, y - 20, x, y + 20)
+            p.drawLine(QtCore.QPointF(x - 20, y), QtCore.QPointF(x + 20, y))
+            p.drawLine(QtCore.QPointF(x, y - 20), QtCore.QPointF(x, y + 20))
 
             if label is not None:
                 p.drawText(p.boundingRect(
-                    x, y + 20, 1, 1, flags, label), flags, label)
+                    QtCore.QRectF(x, y + 20, 1, 1), flags, label),
+                    flags, label
+                )
 
     def paint(self, p, *args):
         # Verbatim copy of ImageItem.paint() except for the actual
@@ -183,12 +184,13 @@ class DataImageItem(pyqtgraph.ImageItem):
                 vlines_it = zip(self.vlines, repeat(None))
 
             for dx, text in vlines_it:
-                rx = int(view.mapViewToDevice(QtCore.QPointF(dx, 0)).x())
-                p.drawLine(rx, 0, rx, height)
+                rx = view.mapViewToDevice(QtCore.QPointF(dx, 0)).x()
+                p.drawLine(QtCore.QPointF(rx, 0), QtCore.QPointF(rx, height))
 
                 if text is not None:
                     p.drawText(p.boundingRect(
-                        rx + 4, 4, 1, 1, flags, text), flags, text)
+                        QtCore.QRectF(rx + 4, 4, 1, 1), flags, text),
+                        flags, text)
 
         if self.hlines is not None:
             width = p.device().geometry().width()
@@ -200,12 +202,13 @@ class DataImageItem(pyqtgraph.ImageItem):
                 hlines_it = zip(self.hlines, repeat(None))
 
             for dy, text in hlines_it:
-                ry = int(view.mapViewToDevice(QtCore.QPointF(0, dy)).y())
-                p.drawLine(0, ry, width, ry)
+                ry = view.mapViewToDevice(QtCore.QPointF(0, dy)).y()
+                p.drawLine(QtCore.QPointF(0, ry), QtCore.QPointF(width, ry))
 
                 if text is not None:
                     p.drawText(p.boundingRect(
-                        width - 4, ry + 2, 1, 1, flags, text), flags, text)
+                        QtCore.QRectF(width - 4, ry + 2, 1, 1), flags, text),
+                        flags, text)
 
         if self.rects is not None:
             flags = QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft
@@ -250,8 +253,10 @@ class DataImageItem(pyqtgraph.ImageItem):
 
                 if text is not None:
                     p.drawText(p.boundingRect(
-                        rect.center().x(), rect.bottom() + 1, 1, 1, flags, text
-                    ), flags, text)
+                        QtCore.QRectF(
+                            rect.center().x(), rect.bottom() + 1, 1, 1),
+                            flags, text),
+                            flags, text)
 
         p.setFont(self._marker_font)
 
